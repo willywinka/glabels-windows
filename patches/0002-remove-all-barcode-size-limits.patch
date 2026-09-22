@@ -1,0 +1,131 @@
+Allow every barcode type to use any positive object size.
+
+The built-in, GNU Barcode, QREncode and Zint backends each apply their own
+minimum or fixed dimensions. ModelBarcodeObject then replaces the dimensions
+chosen by the user with the dimensions returned by the backend. This makes
+small barcode objects snap back to a backend-specific minimum.
+
+Keep automatic sizing when a dimension is zero. For explicit positive sizes,
+preserve the object's requested bounding box and scale the backend's valid
+vector output into it at render time. This handles all current and future
+barcode backends in one place. When aspect-ratio locking is disabled, the user
+can also set width and height independently.
+
+Data, character-set and checksum validation deliberately remain unchanged:
+those are required for a barcode to be encodable at all.
+
+Remove this patch if upstream gains an equivalent "unrestricted barcode size"
+option.
+
+diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
+index d1ffc6c..10c658f 100644
+--- a/model/ModelBarcodeObject.cpp
++++ b/model/ModelBarcodeObject.cpp
+@@ -45,9 +45,31 @@ namespace
+ 
+         const QColor fillColor = QColor( 224, 224, 224, 255 );
+         const Distance pad = Distance::pt(4);
+-        const Distance minW = Distance::pt(18);
+-        const Distance minH = Distance::pt(18);
+         const double MIN_POINT_SIZE = 0.4; // Less than ~0.37 causes issues for QFontMetricsF
++
++
++        void renderBarcodeAtExactSize( QPainter*           painter,
++                                       glbarcode::Barcode* barcode,
++                                       Distance            targetW,
++                                       Distance            targetH )
++        {
++                const double sourceW = barcode->width();
++                const double sourceH = barcode->height();
++
++                if ( (sourceW <= 0) || (sourceH <= 0) ||
++                     (targetW.pt() <= 0) || (targetH.pt() <= 0) )
++                {
++                        return;
++                }
++
++                painter->save();
++                painter->scale( targetW.pt()/sourceW, targetH.pt()/sourceH );
++
++                glbarcode::QtRenderer renderer(painter);
++                barcode->render( renderer );
++
++                painter->restore();
++        }
+ }
+ 
+ 
+@@ -338,6 +360,13 @@ namespace glabels::model
+         ///
+         void ModelBarcodeObject::update()
+         {
++                // Preserve explicitly requested dimensions. Barcode backends may
++                // impose standards-based minimums or fixed dimensions, but the
++                // model should honor any positive size chosen by the user. The
++                // generated barcode is fitted to this box when it is rendered.
++                const Distance requestedW = mW;
++                const Distance requestedH = mH;
++
+                 //
+                 // Build barcode from data
+                 //
+@@ -373,13 +402,25 @@ namespace glabels::model
+                 //
+                 if ( mEditorBarcode->isDataValid() )
+                 {
+-                        mW = Distance::pt( mEditorBarcode->width() );
+-                        mH = Distance::pt( mEditorBarcode->height() );
++                        if ( requestedW.pt() <= 0 )
++                        {
++                                mW = Distance::pt( mEditorBarcode->width() );
++                        }
++                        if ( requestedH.pt() <= 0 )
++                        {
++                                mH = Distance::pt( mEditorBarcode->height() );
++                        }
+                 }
+                 else
+                 {
+-                        mW = Distance::pt( mEditorDefaultBarcode->width() );
+-                        mH = Distance::pt( mEditorDefaultBarcode->height() );
++                        if ( requestedW.pt() <= 0 )
++                        {
++                                mW = Distance::pt( mEditorDefaultBarcode->width() );
++                        }
++                        if ( requestedH.pt() <= 0 )
++                        {
++                                mH = Distance::pt( mEditorDefaultBarcode->height() );
++                        }
+                 }
+ 
+                 QPainterPath path;
+@@ -404,8 +445,7 @@ namespace glabels::model
+                 else if ( mEditorBarcode->isDataValid() )
+                 {
+                         painter->setPen( QPen( color ) );
+-                        glbarcode::QtRenderer renderer(painter);
+-                        mEditorBarcode->render( renderer );
++                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
+                 }
+                 else
+                 {
+@@ -431,8 +471,7 @@ namespace glabels::model
+ 
+                 bc->build( mBcData.expand( record, variables ).toStdString(), mW.pt(), mH.pt() );
+ 
+-                glbarcode::QtRenderer renderer(painter);
+-                bc->render( renderer );
++                renderBarcodeAtExactSize( painter, bc, mW, mH );
+         }
+ 
+ 
+@@ -457,8 +496,7 @@ namespace glabels::model
+                 // Render default barcode
+                 //
+                 painter->setPen( QPen( color ) );
+-                glbarcode::QtRenderer renderer(painter);
+-                mEditorDefaultBarcode->render( renderer );
++                renderBarcodeAtExactSize( painter, mEditorDefaultBarcode.get(), mW, mH );
+ 
+                 //
+                 // Determine font size for text
