@@ -1,7 +1,62 @@
 diff --git a/glabels/ui/ObjectEditor.ui b/glabels/ui/ObjectEditor.ui
 --- a/glabels/ui/ObjectEditor.ui
 +++ b/glabels/ui/ObjectEditor.ui
-@@ -686,5 +686,99 @@
+@@ -631,62 +631,156 @@
+           <layout class="QGridLayout" name="gridLayout_9">
+            <item row="0" column="0">
+             <layout class="QFormLayout" name="formLayout_6">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_20">
+                <property name="text">
+                 <string>Type:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QCheckBox" name="barcodeShowTextCheck">
+                <property name="text">
+                 <string>Show text</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QCheckBox" name="barcodeChecksumCheck">
+                <property name="text">
+                 <string>Checksum</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_23">
+                <property name="text">
+                 <string>Color:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_22">
+                <item>
+                 <widget class="glabels::ColorButton" name="barcodeColorButton">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_18">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </item>
               <item row="0" column="1">
                <widget class="glabels::BarcodeMenuButton" name="barcodeStyleButton"/>
               </item>
@@ -101,12 +156,17 @@ diff --git a/glabels/ui/ObjectEditor.ui b/glabels/ui/ObjectEditor.ui
 +             </item>
              </layout>
             </item>
+            <item row="0" column="1">
+             <spacer name="horizontalSpacer_14">
 diff --git a/glabels/ObjectEditor.cpp b/glabels/ObjectEditor.cpp
 --- a/glabels/ObjectEditor.cpp
 +++ b/glabels/ObjectEditor.cpp
-@@ -50,4 +50,16 @@
+@@ -48,29 +48,43 @@
+         ObjectEditor::ObjectEditor( QWidget *parent )
+                 : mModel(nullptr), mObject(nullptr), mImageCwd("."), mBlocked(false)
          {
                  setupUi( this );
++
 +                connect( barcodeFontFamilyCombo, SIGNAL(currentIndexChanged(int)),
 +                         this, SLOT(onBarcodeControlsChanged()) );
 +                connect( barcodeFontSizeSpin, SIGNAL(valueChanged(double)),
@@ -119,9 +179,51 @@ diff --git a/glabels/ObjectEditor.cpp b/glabels/ObjectEditor.cpp
 +                         this, SLOT(onBarcodeControlsChanged()) );
 +                connect( barcodeTextAlignCombo, SIGNAL(currentIndexChanged(int)),
 +                         this, SLOT(onBarcodeControlsChanged()) );
++
                  textHAlignGroup = new QButtonGroup( this );
                  textHAlignGroup->addButton( textHAlignLeftToggle, Qt::AlignLeft );
-@@ -257,5 +257,22 @@
+                 textHAlignGroup->addButton( textHAlignCenterToggle, Qt::AlignHCenter );
+                 textHAlignGroup->addButton( textHAlignRightToggle, Qt::AlignRight );
+                 textVAlignGroup = new QButtonGroup( this );
+                 textVAlignGroup->addButton( textVAlignTopToggle, Qt::AlignTop );
+                 textVAlignGroup->addButton( textVAlignMiddleToggle, Qt::AlignVCenter );
+                 textVAlignGroup->addButton( textVAlignBottomToggle, Qt::AlignBottom );
+                 lineColorButton->init( tr("No line"), QColor(0,0,0,0), QColor(0,0,0,255) );
+                 fillColorButton->init( tr("No fill"), QColor(0,0,0,0), QColor(0,0,0,255) );
+                 textColorButton->init( tr("Default"), QColor(0,0,0,255), QColor(0,0,0,255) );
+                 barcodeColorButton->init( tr("Default"), QColor(0,0,0,255), QColor(0,0,0,255) );
+                 shadowColorButton->init( tr("Default"), QColor(0,0,0,255), QColor(0,0,0,255) );
+                 textInsertFieldButton->setText( tr("Insert substitution field") );
+                 barcodeInsertFieldButton->setText( tr("Insert substitution field") );
+                 imageFieldButton->setText( tr("Use substitution field") );
+ 
+                 setEnabled( false );
+                 hidePages();
+ 
+                 connect( model::Settings::instance(), SIGNAL(changed()),
+                          this, SLOT(onSettingsChanged()) );
+ 
+                 onSettingsChanged();
+         }
+@@ -239,27 +239,44 @@
+         void ObjectEditor::loadBarcodePage()
+         {
+                 if ( mObject )
+                 {
+                         mBlocked = true;
+ 
+                         barcode::Style bcStyle = mObject->bcStyle();
+ 
+                         barcodeShowTextCheck->setEnabled( bcStyle.textOptional() );
+                         barcodeChecksumCheck->setEnabled( bcStyle.checksumOptional() );
+                         // May need to adjust current text flag, if style changed
+                         bool textFlag = (mObject->bcTextFlag() && bcStyle.canText())
+                                 ||  (bcStyle.canText() && !bcStyle.textOptional());
+                         mObject->setBcTextFlag( textFlag );
+                         // May need to adjust current checksum flag, if style changed
+                         bool csFlag = (mObject->bcChecksumFlag() && bcStyle.canChecksum())
+                                 ||  (bcStyle.canChecksum() && !bcStyle.checksumOptional());
+                         mObject->setBcChecksumFlag( csFlag );
                          barcodeStyleButton->setBcStyle( bcStyle );
                          barcodeShowTextCheck->setChecked( textFlag );
                          barcodeChecksumCheck->setChecked( csFlag );
@@ -144,10 +246,31 @@ diff --git a/glabels/ObjectEditor.cpp b/glabels/ObjectEditor.cpp
 +                        }
                          barcodeColorButton->setColorNode( mObject->bcColorNode() );
                          barcodeDataEdit->setText( mObject->bcData() );
-@@ -692,6 +692,22 @@
+ 
+                         mBlocked = false;
+                 }
+         }
+@@ -676,28 +676,45 @@
+         void ObjectEditor::onBarcodeControlsChanged()
+         {
+                 if ( !mBlocked )
+                 {
+                         mBlocked = true;
+ 
+                         mUndoRedoModel->checkpoint( tr("Barcode") );
+                         barcode::Style bcStyle = barcodeStyleButton->bcStyle();
+ 
+                         barcodeShowTextCheck->setEnabled( bcStyle.textOptional() );
+                         barcodeChecksumCheck->setEnabled( bcStyle.checksumOptional() );
+                         // May need to adjust current text flag, if style changed
+                         bool textFlag = (barcodeShowTextCheck->isChecked() && bcStyle.canText())
+                                 ||  (bcStyle.canText() && !bcStyle.textOptional());
+                         barcodeShowTextCheck->setChecked( textFlag );
+                         // May need to adjust current checksum flag, if style changed
                          bool csFlag = (barcodeChecksumCheck->isChecked() && bcStyle.canChecksum())
                                  ||  (bcStyle.canChecksum() && !bcStyle.checksumOptional());
                          barcodeChecksumCheck->setChecked( csFlag );
++
 +                        Qt::Alignment textAlign = Qt::AlignHCenter;
 +                        if ( barcodeTextAlignCombo->currentIndex() == 0 )
 +                        {
@@ -158,19 +281,54 @@ diff --git a/glabels/ObjectEditor.cpp b/glabels/ObjectEditor.cpp
 +                                textAlign = Qt::AlignRight;
 +                        }
 +
+                         mObject->setBcStyle( bcStyle );
+                         mObject->setBcTextFlag( textFlag );
+                         mObject->setBcChecksumFlag( csFlag );
 +                        mObject->setFontFamily( barcodeFontFamilyCombo->currentFont().family() );
 +                        mObject->setFontSize( barcodeFontSizeSpin->value() );
 +                        mObject->setFontWeight( barcodeFontBoldCheck->isChecked() ? QFont::Bold : QFont::Normal );
 +                        mObject->setFontItalicFlag( barcodeFontItalicCheck->isChecked() );
 +                        mObject->setFontUnderlineFlag( barcodeFontUnderlineCheck->isChecked() );
 +                        mObject->setTextHAlign( textAlign );
-                         mObject->setBcStyle( bcStyle );
-                         mObject->setBcTextFlag( textFlag );
-                         mObject->setBcChecksumFlag( csFlag );
+                         mObject->setBcColorNode( barcodeColorButton->colorNode() );
+                         mObject->setBcData( barcodeDataEdit->toPlainText() );
+ 
+                         mBlocked = false;
+                 }
+         }
 diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 --- a/model/ModelBarcodeObject.cpp
 +++ b/model/ModelBarcodeObject.cpp
-@@ -120,4 +120,10 @@
+@@ -23,16 +23,18 @@
+ #include "barcode/Backends.hpp"
+ 
+ #include "glbarcode/Factory.hpp"
+ #include "glbarcode/QtRenderer.hpp"
+ #include <QBrush>
+ #include <QDebug>
++#include <QFontMetricsF>
+ #include <QPen>
+ #include <QRegularExpression>
+ #include <QTextBlock>
+ #include <QTextDocument>
++#include <algorithm>
+ 
+ 
+ //
+ // Private
+ //
+ namespace
+@@ -110,20 +110,26 @@
+         ///
+         /// Copy constructor
+         ///
+         ModelBarcodeObject::ModelBarcodeObject( const ModelBarcodeObject* object )
+                 : ModelObject(object)
+         {
+                 mBcStyle        = object->mBcStyle;
+                 mBcTextFlag     = object->mBcTextFlag;
+                 mBcChecksumFlag = object->mBcChecksumFlag;
+                 mBcFormatDigits = object->mBcFormatDigits;
                  mBcData         = object->mBcData;
                  mBcColorNode    = object->mBcColorNode;
 +                mTextFontFamily        = object->mTextFontFamily;
@@ -181,10 +339,29 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                mTextHAlign            = object->mTextHAlign;
                  update(); // Initialize cached editor layouts
          }
+ 
+ 
+         ///
+         /// Clone
+         ///
+         ModelBarcodeObject* ModelBarcodeObject::clone() const
 diff --git a/model/XmlLabelCreator.cpp b/model/XmlLabelCreator.cpp
 --- a/model/XmlLabelCreator.cpp
 +++ b/model/XmlLabelCreator.cpp
-@@ -284,4 +284,10 @@
+@@ -271,27 +271,33 @@
+         void XmlLabelCreator::createObjectBarcodeNode( QDomElement &parent, const ModelBarcodeObject* object )
+         {
+                 QDomDocument doc = parent.ownerDocument();
+                 QDomElement node = doc.createElement( "Object-barcode" );
+                 parent.appendChild( node );
+                 /* position attrs */
+                 createPositionAttrs( node, object );
+ 
+                 /* size attrs */
+                 createSizeAttrs( node, object );
+                 /* barcode attrs */
+                 XmlUtil::setStringAttr( node, "backend", object->bcStyle().backendId() );
+                 XmlUtil::setStringAttr( node, "style", object->bcStyle().id() );
                  XmlUtil::setBoolAttr( node, "text", object->bcTextFlag() );
                  XmlUtil::setBoolAttr( node, "checksum", object->bcChecksumFlag() );
 +                XmlUtil::setStringAttr( node, "font_family", object->fontFamily() );
@@ -195,10 +372,33 @@ diff --git a/model/XmlLabelCreator.cpp b/model/XmlLabelCreator.cpp
 +                XmlUtil::setAlignmentAttr( node, "align", object->textHAlign() );
                  if ( object->bcColorNode().isField() )
                  {
+                         XmlUtil::setStringAttr( node, "color_field", object->bcColorNode().key() );
+                 }
+                 else
+                 {
+                         XmlUtil::setUIntAttr( node, "color", object->bcColorNode().rgba() );
+                 }
+                 XmlUtil::setStringAttr( node, "data", object->bcData() );
+                 /* affine attrs */
+                 createAffineAttrs( node, object );
+         }
 diff --git a/model/XmlLabelParser.cpp b/model/XmlLabelParser.cpp
 --- a/model/XmlLabelParser.cpp
 +++ b/model/XmlLabelParser.cpp
-@@ -556,4 +556,10 @@
+@@ -543,35 +543,48 @@
+         ModelBarcodeObject*
+         XmlLabelParser::parseObjectBarcodeNode( const QDomElement &node )
+         {
+                 /* position attrs */
+                 Distance x0 = XmlUtil::getLengthAttr( node, "x", 0.0 );
+                 Distance y0 = XmlUtil::getLengthAttr( node, "y", 0.0 );
+                 /* size attrs */
+                 Distance w = XmlUtil::getLengthAttr( node, "w", 0 );
+                 Distance h = XmlUtil::getLengthAttr( node, "h", 0 );
+                 bool lockAspectRatio = XmlUtil::getBoolAttr( node, "lock_aspect_ratio", false );
+                 /* barcode attrs */
+                 barcode::Style bcStyle = barcode::Backends::style( XmlUtil::getStringAttr( node, "backend", "" ),
+                                                                    XmlUtil::getStringAttr( node, "style", "") );
                  bool bcTextFlag = XmlUtil::getBoolAttr( node, "text", true );
                  bool bcChecksumFlag = XmlUtil::getBoolAttr( node, "checksum", true );
 +                QString       fontFamily        = XmlUtil::getStringAttr( node, "font_family", "Sans" );
@@ -209,7 +409,17 @@ diff --git a/model/XmlLabelParser.cpp b/model/XmlLabelParser.cpp
 +                Qt::Alignment textHAlign        = XmlUtil::getAlignmentAttr( node, "align", Qt::AlignHCenter );
                  QString  key        = XmlUtil::getStringAttr( node, "color_field", "" );
                  bool     field_flag = !key.isEmpty();
-@@ -571,5 +578,12 @@
+                 uint32_t color      = XmlUtil::getUIntAttr( node, "color", 0xFF );
+                 ColorNode bcColorNode( field_flag, color, key );
+ 
+                 QString bcData = XmlUtil::getStringAttr( node, "data", "" );
+                 /* affine attrs */
+                 double a[6];
+                 a[0] = XmlUtil::getDoubleAttr( node, "a0", 1.0 );
+                 a[1] = XmlUtil::getDoubleAttr( node, "a1", 0.0 );
+                 a[2] = XmlUtil::getDoubleAttr( node, "a2", 0.0 );
+                 a[3] = XmlUtil::getDoubleAttr( node, "a3", 1.0 );
+                 a[4] = XmlUtil::getDoubleAttr( node, "a4", 0.0 );
                  a[5] = XmlUtil::getDoubleAttr( node, "a5", 0.0 );
 -                return new ModelBarcodeObject( x0, y0, w, h, lockAspectRatio,
 -                                               bcStyle, bcTextFlag, bcChecksumFlag, bcData, bcColorNode,
@@ -225,3 +435,5 @@ diff --git a/model/XmlLabelParser.cpp b/model/XmlLabelParser.cpp
 +                object->setTextHAlign( textHAlign );
 +                return object;
          }
+ 
+         ModelTextObject*
