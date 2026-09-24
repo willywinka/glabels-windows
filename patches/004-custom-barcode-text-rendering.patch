@@ -55,13 +55,13 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                barcode->render( renderer );
 +                return renderer.text();
 +        }
-
+ 
 @@ -67,3 +119,3 @@
-
+ 
 -                glbarcode::QtRenderer renderer(painter);
 +                NoTextQtRenderer renderer(painter);
                  barcode->render( renderer );
-@@ -72,2 +124,79 @@
+@@ -72,2 +124,84 @@
          }
 +
 +
@@ -162,7 +162,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                   color );
                  }
 @@ -472,3 +611,13 @@
-
+ 
 -                renderBarcodeAtExactSize( painter, bc, mW, mH );
 +                renderBarcodeWithTextBand( painter,
 +                                           bc,
