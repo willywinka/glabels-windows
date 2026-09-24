@@ -1,9 +1,10 @@
 diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 --- a/model/ModelBarcodeObject.cpp
 +++ b/model/ModelBarcodeObject.cpp
-@@ -47,3 +47,126 @@
-
-
+@@ -48,2 +48,54 @@
+         const double MIN_POINT_SIZE = 0.4; // Less than ~0.37 causes issues for QFontMetricsF
++
++
 +        class NoTextQtRenderer final : public glbarcode::QtRenderer
 +        {
 +        public:
@@ -54,6 +55,14 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                barcode->render( renderer );
 +                return renderer.text();
 +        }
+ 
+@@ -67,3 +119,3 @@
+ 
+-                glbarcode::QtRenderer renderer(painter);
++                NoTextQtRenderer renderer(painter);
+                 barcode->render( renderer );
+@@ -72,2 +124,68 @@
+         }
 +
 +
 +        void renderBarcodeWithTextBand( QPainter*           painter,
@@ -69,11 +78,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                        Qt::Alignment       hAlign,
 +                                        const QColor&       color )
 +        {
-+                const double sourceW = barcode->width();
-+                const double sourceH = barcode->height();
-+
-+                if ( (sourceW <= 0) || (sourceH <= 0) ||
-+                     (targetW.pt() <= 0) || (targetH.pt() <= 0) )
++                if ( (targetW.pt() <= 0) || (targetH.pt() <= 0) )
 +                {
 +                        return;
 +                }
@@ -103,11 +108,10 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                {
 +                        painter->save();
 +                        painter->setClipRect( QRectF( 0, 0, targetW.pt(), barcodeH ) );
-+                        painter->scale( targetW.pt()/sourceW, barcodeH/sourceH );
-+
-+                        NoTextQtRenderer renderer(painter);
-+                        barcode->render( renderer );
-+
++                        renderBarcodeAtExactSize( painter,
++                                                  barcode,
++                                                  targetW,
++                                                  Distance::pt(barcodeH) );
 +                        painter->restore();
 +                }
 +
@@ -125,12 +129,8 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                        painter->restore();
 +                }
 +        }
-+
-+
-         void renderBarcodeAtExactSize( QPainter*           painter,
-@@ -409,7 +532,17 @@ namespace glabels::model
-                 else if ( mEditorBarcode->isDataValid() )
-                 {
+ }
+@@ -447,3 +565,13 @@
                          painter->setPen( QPen( color ) );
 -                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
 +                        renderBarcodeWithTextBand( painter,
@@ -145,12 +145,8 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                   mTextHAlign,
 +                                                   color );
                  }
-                 else
-                 {
-@@ -434,4 +567,14 @@ namespace glabels::model
-
-                 bc->build( mBcData.expand( record, variables ).toStdString(), mW.pt(), mH.pt() );
-
+@@ -472,3 +600,13 @@
+ 
 -                renderBarcodeAtExactSize( painter, bc, mW, mH );
 +                renderBarcodeWithTextBand( painter,
 +                                           bc,
