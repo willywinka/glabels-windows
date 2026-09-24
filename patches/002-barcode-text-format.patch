@@ -86,7 +86,6 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                mTextHAlign            = object->mTextHAlign;
                  update(); // Initialize cached editor layouts
          }
-
 @@ -197,6 +215,102 @@ namespace glabels::model
          }
 
