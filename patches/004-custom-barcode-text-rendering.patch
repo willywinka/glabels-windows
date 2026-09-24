@@ -1,11 +1,23 @@
 diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 --- a/model/ModelBarcodeObject.cpp
 +++ b/model/ModelBarcodeObject.cpp
-@@ -64,2 +64,3 @@
-                 glbarcode::QtRenderer renderer(painter);
-+                renderer.setRenderText(false);
+@@ -45,2 +45,11 @@ namespace
+         const Distance pad = Distance::pt(4);
+         const double MIN_POINT_SIZE = 0.4; // Less than ~0.37 causes issues for QFontMetricsF
++
++        class NoTextQtRenderer final : public glbarcode::QtRenderer
++        {
++        public:
++                explicit NoTextQtRenderer( QPainter* painter ) : glbarcode::QtRenderer( painter ) {}
++
++        private:
++                void drawText( double, double, double, const std::string&, glbarcode::HAlign ) override {}
++        };
+@@ -64,2 +73,2 @@ namespace
+-                glbarcode::QtRenderer renderer(painter);
++                NoTextQtRenderer renderer(painter);
                  barcode->render( renderer );
-@@ -68,3 +69,36 @@
+@@ -68,3 +77,36 @@ namespace
                  painter->restore();
          }
 +
@@ -44,7 +56,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                painter->restore();
 +        }
  }
-@@ -141,2 +175,8 @@
+@@ -141,2 +183,8 @@ namespace glabels::model
                  mBcColorNode    = object->mBcColorNode;
 +                mTextFontFamily        = object->mTextFontFamily;
 +                mTextFontSize          = object->mTextFontSize;
@@ -53,7 +65,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                mTextFontUnderlineFlag = object->mTextFontUnderlineFlag;
 +                mTextHAlign            = object->mTextHAlign;
                  update(); // Initialize cached editor layouts
-@@ -447,2 +487,11 @@
+@@ -447,2 +495,11 @@ namespace glabels::model
                          painter->setPen( QPen( color ) );
                          renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
 +                        if ( mBcTextFlag )
@@ -65,7 +77,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                       mTextFontItalicFlag, mTextFontUnderlineFlag,
 +                                                       mTextHAlign, color );
 +                        }
-@@ -472,3 +521,13 @@
+@@ -472,3 +529,13 @@ namespace glabels::model
 -                bc->build( mBcData.expand( record, variables ).toStdString(), mW.pt(), mH.pt() );
 +                const QString data = mBcData.expand( record, variables );
 +                bc->build( data.toStdString(), mW.pt(), mH.pt() );
