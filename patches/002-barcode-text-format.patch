@@ -1,10 +1,10 @@
 diff --git a/model/ModelBarcodeObject.hpp b/model/ModelBarcodeObject.hpp
 --- a/model/ModelBarcodeObject.hpp
 +++ b/model/ModelBarcodeObject.hpp
-@@ -82,6 +82,42 @@ namespace glabels::model
+@@ -82,6 +82,28 @@ namespace glabels::model
                  void setBcTextFlag( bool value ) override;
- 
- 
+
+
 +                //
 +                // Human-readable barcode text font
 +                //
@@ -30,7 +30,7 @@ diff --git a/model/ModelBarcodeObject.hpp b/model/ModelBarcodeObject.hpp
                  //
                  // Barcode Property: bcChecksumFlag
                  //
-@@ -152,6 +188,13 @@ namespace glabels::model
+@@ -152,6 +174,14 @@ namespace glabels::model
                  int                 mBcFormatDigits;
                  RawText             mBcData;
                  ColorNode           mBcColorNode;
@@ -44,11 +44,11 @@ diff --git a/model/ModelBarcodeObject.hpp b/model/ModelBarcodeObject.hpp
 +
                  std::unique_ptr<glbarcode::Barcode> mEditorBarcode;
                  std::unique_ptr<glbarcode::Barcode> mEditorDefaultBarcode;
- 
+
 diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 --- a/model/ModelBarcodeObject.cpp
 +++ b/model/ModelBarcodeObject.cpp
-@@ -68,6 +68,12 @@ namespace glabels::model
+@@ -90,6 +90,12 @@ namespace glabels::model
                  mBcFormatDigits = mBcStyle.preferedN();
                  mBcData         = "";
                  mBcColorNode    = ColorNode( Qt::black );
@@ -58,10 +58,10 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                mTextFontItalicFlag    = false;
 +                mTextFontUnderlineFlag = false;
 +                mTextHAlign            = Qt::AlignHCenter;
- 
+
                  update(); // Initialize cached editor layouts
          }
-@@ -103,6 +109,12 @@ namespace glabels::model
+@@ -125,6 +131,12 @@ namespace glabels::model
                  mBcFormatDigits = mBcStyle.preferedN();
                  mBcData         = bcData;
                  mBcColorNode    = bcColorNode;
@@ -71,10 +71,10 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                mTextFontItalicFlag    = false;
 +                mTextFontUnderlineFlag = false;
 +                mTextHAlign            = Qt::AlignHCenter;
- 
+
                  update(); // Initialize cached editor layouts
          }
-@@ -119,6 +131,12 @@ namespace glabels::model
+@@ -141,5 +153,11 @@ namespace glabels::model
                  mBcFormatDigits = object->mBcFormatDigits;
                  mBcData         = object->mBcData;
                  mBcColorNode    = object->mBcColorNode;
@@ -86,11 +86,11 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                mTextHAlign            = object->mTextHAlign;
                  update(); // Initialize cached editor layouts
          }
- 
-@@ -175,6 +193,116 @@ namespace glabels::model
+
+@@ -197,6 +215,102 @@ namespace glabels::model
          }
- 
- 
+
+
 +        QString ModelBarcodeObject::fontFamily() const
 +        {
 +                return mTextFontFamily;
