@@ -1,0 +1,30 @@
+diff --git a/glbarcode/QtRenderer.hpp b/glbarcode/QtRenderer.hpp
+--- a/glbarcode/QtRenderer.hpp
++++ b/glbarcode/QtRenderer.hpp
+@@ -63,1 +63,2 @@
+                 QtRenderer& setPainter( QPainter* painter );
++                QtRenderer& setRenderText( bool renderText );
+
+diff --git a/glbarcode/QtRenderer.cpp b/glbarcode/QtRenderer.cpp
+--- a/glbarcode/QtRenderer.cpp
++++ b/glbarcode/QtRenderer.cpp
+@@ -39,2 +39,3 @@
+                 QPainter* painter;
+                 QColor    color;
++                bool      renderText{true};
+@@ -71,5 +72,12 @@
+         QtRenderer& QtRenderer::setPainter( QPainter* painter )
+         {
+                 d->painter = painter;
+                 return *this;
+         }
++
++
++        QtRenderer& QtRenderer::setRenderText( bool renderText )
++        {
++                d->renderText = renderText;
++                return *this;
++        }
+@@ -120,1 +128,1 @@
+-                if ( d->painter )
++                if ( d->painter && d->renderText )
