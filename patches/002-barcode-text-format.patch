@@ -1,0 +1,192 @@
+diff --git a/model/ModelBarcodeObject.hpp b/model/ModelBarcodeObject.hpp
+--- a/model/ModelBarcodeObject.hpp
++++ b/model/ModelBarcodeObject.hpp
+@@ -82,6 +82,42 @@ namespace glabels::model
+                 void setBcTextFlag( bool value ) override;
+ 
+ 
++                //
++                // Human-readable barcode text font
++                //
++                QString fontFamily() const override;
++                void setFontFamily( const QString& value ) override;
++
++                double fontSize() const override;
++                void setFontSize( double value ) override;
++
++                QFont::Weight fontWeight() const override;
++                void setFontWeight( QFont::Weight value ) override;
++
++                bool fontItalicFlag() const override;
++                void setFontItalicFlag( bool value ) override;
++
++                bool fontUnderlineFlag() const override;
++                void setFontUnderlineFlag( bool value ) override;
++
++                Qt::Alignment textHAlign() const override;
++                void setTextHAlign( Qt::Alignment value ) override;
++
++
+                 //
+                 // Barcode Property: bcChecksumFlag
+                 //
+@@ -152,6 +188,13 @@ namespace glabels::model
+                 int                 mBcFormatDigits;
+                 RawText             mBcData;
+                 ColorNode           mBcColorNode;
++
++                QString             mTextFontFamily;
++                double              mTextFontSize;
++                QFont::Weight       mTextFontWeight;
++                bool                mTextFontItalicFlag;
++                bool                mTextFontUnderlineFlag;
++                Qt::Alignment       mTextHAlign;
++
+                 std::unique_ptr<glbarcode::Barcode> mEditorBarcode;
+                 std::unique_ptr<glbarcode::Barcode> mEditorDefaultBarcode;
+ 
+diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
+--- a/model/ModelBarcodeObject.cpp
++++ b/model/ModelBarcodeObject.cpp
+@@ -68,6 +68,12 @@ namespace glabels::model
+                 mBcFormatDigits = mBcStyle.preferedN();
+                 mBcData         = "";
+                 mBcColorNode    = ColorNode( Qt::black );
++                mTextFontFamily        = "Sans";
++                mTextFontSize          = 10.0;
++                mTextFontWeight        = QFont::Normal;
++                mTextFontItalicFlag    = false;
++                mTextFontUnderlineFlag = false;
++                mTextHAlign            = Qt::AlignHCenter;
+ 
+                 update(); // Initialize cached editor layouts
+         }
+@@ -103,6 +109,12 @@ namespace glabels::model
+                 mBcFormatDigits = mBcStyle.preferedN();
+                 mBcData         = bcData;
+                 mBcColorNode    = bcColorNode;
++                mTextFontFamily        = "Sans";
++                mTextFontSize          = 10.0;
++                mTextFontWeight        = QFont::Normal;
++                mTextFontItalicFlag    = false;
++                mTextFontUnderlineFlag = false;
++                mTextHAlign            = Qt::AlignHCenter;
+ 
+                 update(); // Initialize cached editor layouts
+         }
+@@ -119,6 +131,12 @@ namespace glabels::model
+                 mBcFormatDigits = object->mBcFormatDigits;
+                 mBcData         = object->mBcData;
+                 mBcColorNode    = object->mBcColorNode;
++                mTextFontFamily        = object->mTextFontFamily;
++                mTextFontSize          = object->mTextFontSize;
++                mTextFontWeight        = object->mTextFontWeight;
++                mTextFontItalicFlag    = object->mTextFontItalicFlag;
++                mTextFontUnderlineFlag = object->mTextFontUnderlineFlag;
++                mTextHAlign            = object->mTextHAlign;
+                 update(); // Initialize cached editor layouts
+         }
+ 
+@@ -175,6 +193,116 @@ namespace glabels::model
+         }
+ 
+ 
++        QString ModelBarcodeObject::fontFamily() const
++        {
++                return mTextFontFamily;
++        }
++
++
++        void ModelBarcodeObject::setFontFamily( const QString& value )
++        {
++                if ( mTextFontFamily != value )
++                {
++                        mTextFontFamily = value;
++                        emit changed();
++                }
++        }
++
++
++        double ModelBarcodeObject::fontSize() const
++        {
++                return mTextFontSize;
++        }
++
++
++        void ModelBarcodeObject::setFontSize( double value )
++        {
++                if ( mTextFontSize != value )
++                {
++                        mTextFontSize = value;
++                        emit changed();
++                }
++        }
++
++
++        QFont::Weight ModelBarcodeObject::fontWeight() const
++        {
++                return mTextFontWeight;
++        }
++
++
++        void ModelBarcodeObject::setFontWeight( QFont::Weight value )
++        {
++                if ( mTextFontWeight != value )
++                {
++                        mTextFontWeight = value;
++                        emit changed();
++                }
++        }
++
++
++        bool ModelBarcodeObject::fontItalicFlag() const
++        {
++                return mTextFontItalicFlag;
++        }
++
++
++        void ModelBarcodeObject::setFontItalicFlag( bool value )
++        {
++                if ( mTextFontItalicFlag != value )
++                {
++                        mTextFontItalicFlag = value;
++                        emit changed();
++                }
++        }
++
++
++        bool ModelBarcodeObject::fontUnderlineFlag() const
++        {
++                return mTextFontUnderlineFlag;
++        }
++
++
++        void ModelBarcodeObject::setFontUnderlineFlag( bool value )
++        {
++                if ( mTextFontUnderlineFlag != value )
++                {
++                        mTextFontUnderlineFlag = value;
++                        emit changed();
++                }
++        }
++
++
++        Qt::Alignment ModelBarcodeObject::textHAlign() const
++        {
++                return mTextHAlign;
++        }
++
++
++        void ModelBarcodeObject::setTextHAlign( Qt::Alignment value )
++        {
++                if ( mTextHAlign != value )
++                {
++                        mTextHAlign = value;
++                        emit changed();
++                }
++        }
++
++
+         ///
+         /// bcChecksumFlag Property Getter
+         ///
