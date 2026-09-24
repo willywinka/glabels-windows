@@ -1,11 +1,7 @@
 diff --git a/glbarcode/QtRenderer.hpp b/glbarcode/QtRenderer.hpp
 --- a/glbarcode/QtRenderer.hpp
 +++ b/glbarcode/QtRenderer.hpp
-@@ -52,14 +52,15 @@
-                 /** Get "painter" parameter
-                  *
-                  * @returns painter parameter
-                  */
+@@ -56,10 +56,11 @@
                  QPainter* painter() const;
                  /** Set "painter" parameter
                   *
@@ -15,34 +11,26 @@ diff --git a/glbarcode/QtRenderer.hpp b/glbarcode/QtRenderer.hpp
                   */
                  QtRenderer& setPainter( QPainter* painter );
 +                QtRenderer& setRenderText( bool renderText );
-
+ 
          private:
 diff --git a/glbarcode/QtRenderer.cpp b/glbarcode/QtRenderer.cpp
 --- a/glbarcode/QtRenderer.cpp
 +++ b/glbarcode/QtRenderer.cpp
-@@ -37,6 +37,7 @@
+@@ -37,5 +37,6 @@
          struct QtRenderer::PrivateData
          {
                  QPainter* painter;
                  QColor    color;
 +                bool      renderText{true};
          };
-
-
-@@ -65,14 +66,21 @@
-         QPainter* QtRenderer::painter( ) const
-         {
-                 return d->painter;
-         }
-
-
+@@ -71,8 +72,15 @@
          QtRenderer& QtRenderer::setPainter( QPainter* painter )
          {
                  d->painter = painter;
                  return *this;
          }
-
-
+ 
+ 
 +        QtRenderer& QtRenderer::setRenderText( bool renderText )
 +        {
 +                d->renderText = renderText;
@@ -51,12 +39,9 @@ diff --git a/glbarcode/QtRenderer.cpp b/glbarcode/QtRenderer.cpp
 +
 +
          void QtRenderer::drawBegin( double w, double h )
-@@ -118,7 +126,7 @@
+@@ -118,4 +126,4 @@
          void QtRenderer::drawText( double x, double y, double size, const std::string& text, HAlign halign )
          {
 -                if ( d->painter )
 +                if ( d->painter && d->renderText )
                  {
-                         d->painter->setPen( QPen( d->color ) );
-
-                         QFont font;
