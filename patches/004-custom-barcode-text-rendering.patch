@@ -1,0 +1,158 @@
+diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
+--- a/model/ModelBarcodeObject.cpp
++++ b/model/ModelBarcodeObject.cpp
+@@ -46,4 +46,127 @@ namespace
+         const double MIN_POINT_SIZE = 0.4; // Less than ~0.37 causes issues for QFontMetricsF
+
+
++        class NoTextQtRenderer final : public glbarcode::QtRenderer
++        {
++        public:
++                explicit NoTextQtRenderer( QPainter* painter )
++                : glbarcode::QtRenderer( painter )
++                {
++                }
++
++        private:
++                void drawText( double, double, double, const std::string&, glbarcode::HAlign ) override
++                {
++                }
++        };
++
++
++        class TextCaptureRenderer final : public glbarcode::Renderer
++        {
++        public:
++                QString text() const
++                {
++                        return mText;
++                }
++
++        private:
++                void drawBegin( double, double ) override {}
++                void drawEnd() override {}
++                void drawLine( double, double, double, double ) override {}
++                void drawBox( double, double, double, double ) override {}
++                void drawRing( double, double, double, double ) override {}
++                void drawHexagon( double, double, double ) override {}
++
++                void drawText( double,
++                               double,
++                               double,
++                               const std::string& text,
++                               glbarcode::HAlign ) override
++                {
++                        mText += QString::fromStdString( text );
++                }
++
++                QString mText;
++        };
++
++
++        QString barcodeHumanReadableText( glbarcode::Barcode* barcode )
++        {
++                TextCaptureRenderer renderer;
++                barcode->render( renderer );
++                return renderer.text();
++        }
++
++
++        void renderBarcodeWithTextBand( QPainter*           painter,
++                                        glbarcode::Barcode* barcode,
++                                        Distance            targetW,
++                                        Distance            targetH,
++                                        bool                showText,
++                                        const QString&      fontFamily,
++                                        double              fontSize,
++                                        QFont::Weight       fontWeight,
++                                        bool                italic,
++                                        bool                underline,
++                                        Qt::Alignment       hAlign,
++                                        const QColor&       color )
++        {
++                const double sourceW = barcode->width();
++                const double sourceH = barcode->height();
++
++                if ( (sourceW <= 0) || (sourceH <= 0) ||
++                     (targetW.pt() <= 0) || (targetH.pt() <= 0) )
++                {
++                        return;
++                }
++
++                QString text;
++                QFont font( fontFamily );
++                font.setPointSizeF( std::max( fontSize, MIN_POINT_SIZE ) );
++                font.setWeight( fontWeight );
++                font.setItalic( italic );
++                font.setUnderline( underline );
++
++                double textBandH = 0.0;
++                if ( showText )
++                {
++                        text = barcodeHumanReadableText( barcode );
++                        if ( !text.isEmpty() )
++                        {
++                                const QFontMetricsF fm( font );
++                                const double maxTextH = std::max( 0.0, targetH.pt() - 1.0 );
++                                textBandH = std::min( fm.height() + 2.0, maxTextH );
++                        }
++                }
++
++                const double barcodeH = targetH.pt() - textBandH;
++
++                if ( barcodeH > 0 )
++                {
++                        painter->save();
++                        painter->setClipRect( QRectF( 0, 0, targetW.pt(), barcodeH ) );
++                        painter->scale( targetW.pt()/sourceW, barcodeH/sourceH );
++
++                        NoTextQtRenderer renderer(painter);
++                        barcode->render( renderer );
++
++                        painter->restore();
++                }
++
++                if ( showText && !text.isEmpty() && (textBandH > 0) )
++                {
++                        const QRectF textRect( 0, barcodeH, targetW.pt(), textBandH );
++
++                        painter->save();
++                        painter->setClipRect( textRect );
++                        painter->setFont( font );
++                        painter->setPen( QPen( color ) );
++                        painter->drawText( textRect,
++                                           int(hAlign) | int(Qt::AlignVCenter) | int(Qt::TextSingleLine),
++                                           text );
++                        painter->restore();
++                }
++        }
++
++
+         void renderBarcodeAtExactSize( QPainter*           painter,
+@@ -445,2 +568,12 @@ namespace glabels::model
+                         painter->setPen( QPen( color ) );
+-                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
++                        renderBarcodeWithTextBand( painter,
++                                                   mEditorBarcode.get(),
++                                                   mW, mH,
++                                                   mBcTextFlag,
++                                                   mTextFontFamily,
++                                                   mTextFontSize,
++                                                   mTextFontWeight,
++                                                   mTextFontItalicFlag,
++                                                   mTextFontUnderlineFlag,
++                                                   mTextHAlign,
++                                                   color );
+@@ -471 +604,11 @@ namespace glabels::model
+-                renderBarcodeAtExactSize( painter, bc, mW, mH );
++                renderBarcodeWithTextBand( painter,
++                                           bc,
++                                           mW, mH,
++                                           mBcTextFlag,
++                                           mTextFontFamily,
++                                           mTextFontSize,
++                                           mTextFontWeight,
++                                           mTextFontItalicFlag,
++                                           mTextFontUnderlineFlag,
++                                           mTextHAlign,
++                                           color );
