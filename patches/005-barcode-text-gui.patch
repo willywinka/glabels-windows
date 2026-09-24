@@ -1,160 +1,138 @@
-diff --git a/glabels/ObjectEditor.hpp b/glabels/ObjectEditor.hpp
---- a/glabels/ObjectEditor.hpp
-+++ b/glabels/ObjectEditor.hpp
-@@ -104,7 +104,13 @@
-                 model::Units             mUnits;
-                 int                      mSpinDigits;
-                 double                   mSpinStep;
-                 QButtonGroup*            textHAlignGroup;
-                 QButtonGroup*            textVAlignGroup;
-+                QFontComboBox*           mBarcodeFontFamilyCombo;
-+                QDoubleSpinBox*          mBarcodeFontSizeSpin;
-+                QCheckBox*               mBarcodeFontBoldCheck;
-+                QCheckBox*               mBarcodeFontItalicCheck;
-+                QCheckBox*               mBarcodeFontUnderlineCheck;
-+                QComboBox*               mBarcodeTextAlignCombo;
- 
-                 QString                  mImageCwd;
 diff --git a/glabels/ObjectEditor.cpp b/glabels/ObjectEditor.cpp
+index 5bc5956..4478d35 100644
 --- a/glabels/ObjectEditor.cpp
 +++ b/glabels/ObjectEditor.cpp
-@@ -48,6 +48,39 @@
-         ObjectEditor::ObjectEditor( QWidget *parent )
+@@ -2,6 +2,52 @@
                  : mModel(nullptr), mObject(nullptr), mImageCwd("."), mBlocked(false)
          {
                  setupUi( this );
-+                mBarcodeFontFamilyCombo = new QFontComboBox( groupBox_7 );
-+                mBarcodeFontSizeSpin = new QDoubleSpinBox( groupBox_7 );
-+                mBarcodeFontSizeSpin->setDecimals( 1 );
-+                mBarcodeFontSizeSpin->setRange( 1.0, 200.0 );
-+                mBarcodeFontSizeSpin->setSingleStep( 0.5 );
-+                mBarcodeFontSizeSpin->setSuffix( " pt" );
-+                mBarcodeFontBoldCheck = new QCheckBox( tr("Bold"), groupBox_7 );
-+                mBarcodeFontItalicCheck = new QCheckBox( tr("Italic"), groupBox_7 );
-+                mBarcodeFontUnderlineCheck = new QCheckBox( tr("Underline"), groupBox_7 );
-+                mBarcodeTextAlignCombo = new QComboBox( groupBox_7 );
-+                mBarcodeTextAlignCombo->addItem( tr("Left") );
-+                mBarcodeTextAlignCombo->addItem( tr("Center") );
-+                mBarcodeTextAlignCombo->addItem( tr("Right") );
 +
-+                formLayout_6->addRow( tr("Font:"), mBarcodeFontFamilyCombo );
-+                formLayout_6->addRow( tr("Size:"), mBarcodeFontSizeSpin );
-+                formLayout_6->addRow( tr("Bold:"), mBarcodeFontBoldCheck );
-+                formLayout_6->addRow( tr("Italic:"), mBarcodeFontItalicCheck );
-+                formLayout_6->addRow( tr("Underline:"), mBarcodeFontUnderlineCheck );
-+                formLayout_6->addRow( tr("Alignment:"), mBarcodeTextAlignCombo );
++                auto* barcodeFontFamilyCombo = new QFontComboBox( barcodePage );
++                barcodeFontFamilyCombo->setObjectName( "barcodeFontFamilyCombo" );
++                formLayout_6->addRow( tr("Font:"), barcodeFontFamilyCombo );
 +
-+                connect( mBarcodeFontFamilyCombo, &QFontComboBox::currentFontChanged,
-+                         this, &ObjectEditor::onBarcodeControlsChanged );
-+                connect( mBarcodeFontSizeSpin, &QDoubleSpinBox::valueChanged,
-+                         this, &ObjectEditor::onBarcodeControlsChanged );
-+                connect( mBarcodeFontBoldCheck, &QCheckBox::toggled,
-+                         this, &ObjectEditor::onBarcodeControlsChanged );
-+                connect( mBarcodeFontItalicCheck, &QCheckBox::toggled,
-+                         this, &ObjectEditor::onBarcodeControlsChanged );
-+                connect( mBarcodeFontUnderlineCheck, &QCheckBox::toggled,
-+                         this, &ObjectEditor::onBarcodeControlsChanged );
-+                connect( mBarcodeTextAlignCombo, &QComboBox::currentIndexChanged,
-+                         this, &ObjectEditor::onBarcodeControlsChanged );
++                auto* barcodeFontSizeSpin = new QDoubleSpinBox( barcodePage );
++                barcodeFontSizeSpin->setObjectName( "barcodeFontSizeSpin" );
++                barcodeFontSizeSpin->setDecimals( 1 );
++                barcodeFontSizeSpin->setRange( 1.0, 200.0 );
++                barcodeFontSizeSpin->setSingleStep( 0.5 );
++                barcodeFontSizeSpin->setSuffix( " pt" );
++                formLayout_6->addRow( tr("Size:"), barcodeFontSizeSpin );
++
++                auto* barcodeFontStyleWidget = new QWidget( barcodePage );
++                auto* barcodeFontStyleLayout = new QHBoxLayout( barcodeFontStyleWidget );
++                barcodeFontStyleLayout->setContentsMargins( 0, 0, 0, 0 );
++                auto* barcodeFontBoldCheck = new QCheckBox( tr("Bold"), barcodeFontStyleWidget );
++                barcodeFontBoldCheck->setObjectName( "barcodeFontBoldCheck" );
++                auto* barcodeFontItalicCheck = new QCheckBox( tr("Italic"), barcodeFontStyleWidget );
++                barcodeFontItalicCheck->setObjectName( "barcodeFontItalicCheck" );
++                auto* barcodeFontUnderlineCheck = new QCheckBox( tr("Underline"), barcodeFontStyleWidget );
++                barcodeFontUnderlineCheck->setObjectName( "barcodeFontUnderlineCheck" );
++                barcodeFontStyleLayout->addWidget( barcodeFontBoldCheck );
++                barcodeFontStyleLayout->addWidget( barcodeFontItalicCheck );
++                barcodeFontStyleLayout->addWidget( barcodeFontUnderlineCheck );
++                formLayout_6->addRow( tr("Style:"), barcodeFontStyleWidget );
++
++                auto* barcodeTextAlignCombo = new QComboBox( barcodePage );
++                barcodeTextAlignCombo->setObjectName( "barcodeTextAlignCombo" );
++                barcodeTextAlignCombo->addItem( tr("Left"), int(Qt::AlignLeft) );
++                barcodeTextAlignCombo->addItem( tr("Center"), int(Qt::AlignHCenter) );
++                barcodeTextAlignCombo->addItem( tr("Right"), int(Qt::AlignRight) );
++                formLayout_6->addRow( tr("Alignment:"), barcodeTextAlignCombo );
++
++                connect( barcodeFontFamilyCombo, SIGNAL(currentFontChanged(QFont)),
++                         this, SLOT(onBarcodeControlsChanged()) );
++                connect( barcodeFontSizeSpin, SIGNAL(valueChanged(double)),
++                         this, SLOT(onBarcodeControlsChanged()) );
++                connect( barcodeFontBoldCheck, SIGNAL(toggled(bool)),
++                         this, SLOT(onBarcodeControlsChanged()) );
++                connect( barcodeFontItalicCheck, SIGNAL(toggled(bool)),
++                         this, SLOT(onBarcodeControlsChanged()) );
++                connect( barcodeFontUnderlineCheck, SIGNAL(toggled(bool)),
++                         this, SLOT(onBarcodeControlsChanged()) );
++                connect( barcodeTextAlignCombo, SIGNAL(currentIndexChanged(int)),
++                         this, SLOT(onBarcodeControlsChanged()) );
                  textHAlignGroup = new QButtonGroup( this );
                  textHAlignGroup->addButton( textHAlignLeftToggle, Qt::AlignLeft );
-@@ -257,5 +257,22 @@
+                 textHAlignGroup->addButton( textHAlignCenterToggle, Qt::AlignHCenter );
+@@ -12,6 +58,39 @@
                          barcodeStyleButton->setBcStyle( bcStyle );
                          barcodeShowTextCheck->setChecked( textFlag );
                          barcodeChecksumCheck->setChecked( csFlag );
-+                        mBarcodeFontFamilyCombo->setCurrentFont( QFont( mObject->fontFamily() ) );
-+                        mBarcodeFontSizeSpin->setValue( mObject->fontSize() );
-+                        mBarcodeFontBoldCheck->setChecked( mObject->fontWeight() == QFont::Bold );
-+                        mBarcodeFontItalicCheck->setChecked( mObject->fontItalicFlag() );
-+                        mBarcodeFontUnderlineCheck->setChecked( mObject->fontUnderlineFlag() );
++
++                        auto* barcodeFontFamilyCombo = barcodePage->findChild<QFontComboBox*>("barcodeFontFamilyCombo");
++                        auto* barcodeFontSizeSpin = barcodePage->findChild<QDoubleSpinBox*>("barcodeFontSizeSpin");
++                        auto* barcodeFontBoldCheck = barcodePage->findChild<QCheckBox*>("barcodeFontBoldCheck");
++                        auto* barcodeFontItalicCheck = barcodePage->findChild<QCheckBox*>("barcodeFontItalicCheck");
++                        auto* barcodeFontUnderlineCheck = barcodePage->findChild<QCheckBox*>("barcodeFontUnderlineCheck");
++                        auto* barcodeTextAlignCombo = barcodePage->findChild<QComboBox*>("barcodeTextAlignCombo");
++
++                        barcodeFontFamilyCombo->setCurrentFont( QFont( mObject->fontFamily() ) );
++                        barcodeFontSizeSpin->setValue( mObject->fontSize() );
++                        barcodeFontBoldCheck->setChecked( mObject->fontWeight() == QFont::Bold );
++                        barcodeFontItalicCheck->setChecked( mObject->fontItalicFlag() );
++                        barcodeFontUnderlineCheck->setChecked( mObject->fontUnderlineFlag() );
 +                        if ( mObject->textHAlign() & Qt::AlignLeft )
 +                        {
-+                                mBarcodeTextAlignCombo->setCurrentIndex( 0 );
++                                barcodeTextAlignCombo->setCurrentIndex( 0 );
 +                        }
 +                        else if ( mObject->textHAlign() & Qt::AlignRight )
 +                        {
-+                                mBarcodeTextAlignCombo->setCurrentIndex( 2 );
++                                barcodeTextAlignCombo->setCurrentIndex( 2 );
 +                        }
 +                        else
 +                        {
-+                                mBarcodeTextAlignCombo->setCurrentIndex( 1 );
++                                barcodeTextAlignCombo->setCurrentIndex( 1 );
 +                        }
++
++                        barcodeFontFamilyCombo->setEnabled( textFlag );
++                        barcodeFontSizeSpin->setEnabled( textFlag );
++                        barcodeFontBoldCheck->setEnabled( textFlag );
++                        barcodeFontItalicCheck->setEnabled( textFlag );
++                        barcodeFontUnderlineCheck->setEnabled( textFlag );
++                        barcodeTextAlignCombo->setEnabled( textFlag );
++
                          barcodeColorButton->setColorNode( mObject->bcColorNode() );
                          barcodeDataEdit->setText( mObject->bcData() );
-@@ -692,8 +692,25 @@
+ 
+@@ -22,9 +101,40 @@
                          bool csFlag = (barcodeChecksumCheck->isChecked() && bcStyle.canChecksum())
                                  ||  (bcStyle.canChecksum() && !bcStyle.checksumOptional());
                          barcodeChecksumCheck->setChecked( csFlag );
++
++                        auto* barcodeFontFamilyCombo = barcodePage->findChild<QFontComboBox*>("barcodeFontFamilyCombo");
++                        auto* barcodeFontSizeSpin = barcodePage->findChild<QDoubleSpinBox*>("barcodeFontSizeSpin");
++                        auto* barcodeFontBoldCheck = barcodePage->findChild<QCheckBox*>("barcodeFontBoldCheck");
++                        auto* barcodeFontItalicCheck = barcodePage->findChild<QCheckBox*>("barcodeFontItalicCheck");
++                        auto* barcodeFontUnderlineCheck = barcodePage->findChild<QCheckBox*>("barcodeFontUnderlineCheck");
++                        auto* barcodeTextAlignCombo = barcodePage->findChild<QComboBox*>("barcodeTextAlignCombo");
++
++                        barcodeFontFamilyCombo->setEnabled( textFlag );
++                        barcodeFontSizeSpin->setEnabled( textFlag );
++                        barcodeFontBoldCheck->setEnabled( textFlag );
++                        barcodeFontItalicCheck->setEnabled( textFlag );
++                        barcodeFontUnderlineCheck->setEnabled( textFlag );
++                        barcodeTextAlignCombo->setEnabled( textFlag );
++
++                        Qt::Alignment textAlign = Qt::AlignHCenter;
++                        if ( barcodeTextAlignCombo->currentIndex() == 0 )
++                        {
++                                textAlign = Qt::AlignLeft;
++                        }
++                        else if ( barcodeTextAlignCombo->currentIndex() == 2 )
++                        {
++                                textAlign = Qt::AlignRight;
++                        }
++
                          mObject->setBcStyle( bcStyle );
                          mObject->setBcTextFlag( textFlag );
                          mObject->setBcChecksumFlag( csFlag );
-+                        mObject->setFontFamily( mBarcodeFontFamilyCombo->currentFont().family() );
-+                        mObject->setFontSize( mBarcodeFontSizeSpin->value() );
-+                        mObject->setFontWeight( mBarcodeFontBoldCheck->isChecked() ? QFont::Bold : QFont::Normal );
-+                        mObject->setFontItalicFlag( mBarcodeFontItalicCheck->isChecked() );
-+                        mObject->setFontUnderlineFlag( mBarcodeFontUnderlineCheck->isChecked() );
-+                        if ( mBarcodeTextAlignCombo->currentIndex() == 0 )
-+                        {
-+                                mObject->setTextHAlign( Qt::AlignLeft );
-+                        }
-+                        else if ( mBarcodeTextAlignCombo->currentIndex() == 2 )
-+                        {
-+                                mObject->setTextHAlign( Qt::AlignRight );
-+                        }
-+                        else
-+                        {
-+                                mObject->setTextHAlign( Qt::AlignHCenter );
-+                        }
++                        mObject->setFontFamily( barcodeFontFamilyCombo->currentFont().family() );
++                        mObject->setFontSize( barcodeFontSizeSpin->value() );
++                        mObject->setFontWeight( barcodeFontBoldCheck->isChecked() ? QFont::Bold : QFont::Normal );
++                        mObject->setFontItalicFlag( barcodeFontItalicCheck->isChecked() );
++                        mObject->setFontUnderlineFlag( barcodeFontUnderlineCheck->isChecked() );
++                        mObject->setTextHAlign( textAlign );
                          mObject->setBcColorNode( barcodeColorButton->colorNode() );
                          mObject->setBcData( barcodeDataEdit->toPlainText() );
-diff --git a/model/XmlLabelCreator.cpp b/model/XmlLabelCreator.cpp
---- a/model/XmlLabelCreator.cpp
-+++ b/model/XmlLabelCreator.cpp
-@@ -282,6 +282,12 @@
-                 XmlUtil::setStringAttr( node, "backend", object->bcStyle().backendId() );
-                 XmlUtil::setStringAttr( node, "style", object->bcStyle().id() );
-                 XmlUtil::setBoolAttr( node, "text", object->bcTextFlag() );
-                 XmlUtil::setBoolAttr( node, "checksum", object->bcChecksumFlag() );
-+                XmlUtil::setStringAttr( node, "font_family", object->fontFamily() );
-+                XmlUtil::setDoubleAttr( node, "font_size", object->fontSize() );
-+                XmlUtil::setWeightAttr( node, "font_weight", object->fontWeight() );
-+                XmlUtil::setBoolAttr( node, "font_italic", object->fontItalicFlag() );
-+                XmlUtil::setBoolAttr( node, "font_underline", object->fontUnderlineFlag() );
-+                XmlUtil::setAlignmentAttr( node, "align", object->textHAlign() );
-                 if ( object->bcColorNode().isField() )
-                 {
-diff --git a/model/XmlLabelParser.cpp b/model/XmlLabelParser.cpp
---- a/model/XmlLabelParser.cpp
-+++ b/model/XmlLabelParser.cpp
-@@ -553,7 +553,13 @@
-                 /* barcode attrs */
-                 barcode::Style bcStyle = barcode::Backends::style( XmlUtil::getStringAttr( node, "backend", "" ),
-                                                                    XmlUtil::getStringAttr( node, "style", "") );
-                 bool bcTextFlag = XmlUtil::getBoolAttr( node, "text", true );
-                 bool bcChecksumFlag = XmlUtil::getBoolAttr( node, "checksum", true );
-+                QString       fontFamily        = XmlUtil::getStringAttr( node, "font_family", "Sans" );
-+                double        fontSize          = XmlUtil::getDoubleAttr( node, "font_size", 10.0 );
-+                QFont::Weight fontWeight        = XmlUtil::getWeightAttr( node, "font_weight", QFont::Normal );
-+                bool          fontItalicFlag    = XmlUtil::getBoolAttr( node, "font_italic", false );
-+                bool          fontUnderlineFlag = XmlUtil::getBoolAttr( node, "font_underline", false );
-+                Qt::Alignment textHAlign        = XmlUtil::getAlignmentAttr( node, "align", Qt::AlignHCenter );
-                 QString  key        = XmlUtil::getStringAttr( node, "color_field", "" );
-                 bool     field_flag = !key.isEmpty();
-@@ -569,7 +569,14 @@
-                 a[3] = XmlUtil::getDoubleAttr( node, "a3", 1.0 );
-                 a[4] = XmlUtil::getDoubleAttr( node, "a4", 0.0 );
-                 a[5] = XmlUtil::getDoubleAttr( node, "a5", 0.0 );
--                return new ModelBarcodeObject( x0, y0, w, h, lockAspectRatio,
--                                               bcStyle, bcTextFlag, bcChecksumFlag, bcData, bcColorNode,
--                                               QTransform( a[0], a[1], a[2], a[3], a[4], a[5] ) );
-+                auto* object = new ModelBarcodeObject( x0, y0, w, h, lockAspectRatio,
-+                                                       bcStyle, bcTextFlag, bcChecksumFlag, bcData, bcColorNode,
-+                                                       QTransform( a[0], a[1], a[2], a[3], a[4], a[5] ) );
-+                object->setFontFamily( fontFamily );
-+                object->setFontSize( fontSize );
-+                object->setFontWeight( fontWeight );
-+                object->setFontItalicFlag( fontItalicFlag );
-+                object->setFontUnderlineFlag( fontUnderlineFlag );
-+                object->setTextHAlign( textHAlign );
-+                return object;
-         }
+ 
