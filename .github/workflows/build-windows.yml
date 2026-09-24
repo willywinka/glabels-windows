@@ -91,14 +91,20 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           patches=(patches/*.patch)
+
           if [ ${#patches[@]} -eq 0 ]; then
-            echo "No patches to apply."
-            exit 0
+            echo "No .patch files to apply."
+          else
+            for p in "${patches[@]}"; do
+              echo "==> $p"
+              git -C src apply --verbose "${GITHUB_WORKSPACE}/${p}"
+            done
           fi
-          for p in "${patches[@]}"; do
-            echo "==> $p"
-            git -C src apply --verbose "${GITHUB_WORKSPACE}/${p}"
-          done
+
+          if [ -f patches/005-barcode-text-gui.py ]; then
+            echo "==> patches/005-barcode-text-gui.py"
+            python patches/005-barcode-text-gui.py src
+          fi
 
       - name: Clone vcpkg
         shell: bash
