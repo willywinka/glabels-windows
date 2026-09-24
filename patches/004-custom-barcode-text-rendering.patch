@@ -128,7 +128,10 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +
 +
          void renderBarcodeAtExactSize( QPainter*           painter,
-@@ -447 +570,11 @@
+@@ -409,7 +532,17 @@ namespace glabels::model
+                 else if ( mEditorBarcode->isDataValid() )
+                 {
+                         painter->setPen( QPen( color ) );
 -                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
 +                        renderBarcodeWithTextBand( painter,
 +                                                   mEditorBarcode.get(),
@@ -141,7 +144,13 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                   mTextFontUnderlineFlag,
 +                                                   mTextHAlign,
 +                                                   color );
-@@ -473 +606,11 @@
+                 }
+                 else
+                 {
+@@ -434,4 +567,14 @@ namespace glabels::model
+
+                 bc->build( mBcData.expand( record, variables ).toStdString(), mW.pt(), mH.pt() );
+
 -                renderBarcodeAtExactSize( painter, bc, mW, mH );
 +                renderBarcodeWithTextBand( painter,
 +                                           bc,
@@ -154,3 +163,4 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                           mTextFontUnderlineFlag,
 +                                           mTextHAlign,
 +                                           color );
+         }
