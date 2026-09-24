@@ -264,31 +264,45 @@ start, end = function_slice(
     "        ModelTextObject*",
 )
 sub = text[start:end]
+
 if "object->setFontFamily( fontFamily );" not in sub:
-    pattern = re.compile(
-        r"""(?ms)^(\s*)return\s+new\s+ModelBarcodeObject\(\s*
-        x0,\s*y0,\s*w,\s*h,\s*lockAspectRatio,\s*
-        bcStyle,\s*bcTextFlag,\s*bcChecksumFlag,\s*bcData,\s*bcColorNode,\s*
-        QTransform\(\s*a\[0\],\s*a\[1\],\s*a\[2\],\s*a\[3\],\s*a\[4\],\s*a\[5\]\s*\)\s*
-        \);"""
-    )
-    m = pattern.search(sub)
-    if not m:
-        raise RuntimeError("replace barcode parser return: constructor return not found")
-    indent = m.group(1)
-    replacement = (
-        f'{indent}auto* object = new ModelBarcodeObject( x0, y0, w, h, lockAspectRatio,\n'
-        f'{indent}                                            bcStyle, bcTextFlag, bcChecksumFlag, bcData, bcColorNode,\n'
-        f'{indent}                                            QTransform( a[0], a[1], a[2], a[3], a[4], a[5] ) );\n'
-        f'{indent}object->setFontFamily( fontFamily );\n'
-        f'{indent}object->setFontSize( fontSize );\n'
-        f'{indent}object->setFontWeight( fontWeight );\n'
-        f'{indent}object->setFontItalicFlag( fontItalicFlag );\n'
-        f'{indent}object->setFontUnderlineFlag( fontUnderlineFlag );\n'
-        f'{indent}object->setTextHAlign( textHAlign );\n'
-        f'{indent}return object;'
-    )
-    sub = sub[:m.start()] + replacement + sub[m.end():]
+    lines = sub.splitlines(keepends=True)
+
+    return_i = None
+    for i, line in enumerate(lines):
+        if "return new ModelBarcodeObject(" in line:
+            return_i = i
+            break
+
+    if return_i is None:
+        raise RuntimeError("replace barcode parser return: start line not found")
+
+    return_j = None
+    for j in range(return_i, min(return_i + 12, len(lines))):
+        if ");" in lines[j]:
+            return_j = j
+            break
+
+    if return_j is None:
+        raise RuntimeError("replace barcode parser return: end line not found")
+
+    indent = lines[return_i][:len(lines[return_i]) - len(lines[return_i].lstrip())]
+
+    replacement = [
+        f"{indent}auto* object = new ModelBarcodeObject( x0, y0, w, h, lockAspectRatio,\n",
+        f"{indent}                                             bcStyle, bcTextFlag, bcChecksumFlag, bcData, bcColorNode,\n",
+        f"{indent}                                             QTransform( a[0], a[1], a[2], a[3], a[4], a[5] ) );\n",
+        f"{indent}object->setFontFamily( fontFamily );\n",
+        f"{indent}object->setFontSize( fontSize );\n",
+        f"{indent}object->setFontWeight( fontWeight );\n",
+        f"{indent}object->setFontItalicFlag( fontItalicFlag );\n",
+        f"{indent}object->setFontUnderlineFlag( fontUnderlineFlag );\n",
+        f"{indent}object->setTextHAlign( textHAlign );\n",
+        f"{indent}return object;\n",
+    ]
+
+    lines[return_i:return_j + 1] = replacement
+    sub = "".join(lines)
     text = text[:start] + sub + text[end:]
     print("[ok] restore barcode font properties after XML load")
 else:
