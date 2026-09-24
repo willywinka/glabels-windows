@@ -90,7 +90,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                font.setItalic( italic );
 +                font.setUnderline( underline );
 +
-+                const double textGap = 1.0;
++                const double textGap = 0.25;
 +                double textBandH = 0.0;
 +                const QFontMetricsF fm( font );
 +
@@ -122,7 +122,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                {
 +                        const double textTop = barcodeH + textGap;
 +                        const QRectF textRect( 0, textTop, targetW.pt(), textBandH );
-+                        const double baselineY = textTop + fm.ascent();
++                        const double baselineY = textTop - fm.tightBoundingRect( text ).top();
 +
 +                        painter->save();
 +                        painter->setClipRect( textRect );
