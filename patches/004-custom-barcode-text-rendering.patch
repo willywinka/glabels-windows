@@ -55,13 +55,13 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                barcode->render( renderer );
 +                return renderer.text();
 +        }
- 
+
 @@ -67,3 +119,3 @@
- 
+
 -                glbarcode::QtRenderer renderer(painter);
 +                NoTextQtRenderer renderer(painter);
                  barcode->render( renderer );
-@@ -72,2 +124,68 @@
+@@ -72,2 +124,79 @@
          }
 +
 +
@@ -90,19 +90,22 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                font.setItalic( italic );
 +                font.setUnderline( underline );
 +
++                const double textGap = 1.0;
 +                double textBandH = 0.0;
++                const QFontMetricsF fm( font );
++
 +                if ( showText )
 +                {
 +                        text = barcodeHumanReadableText( barcode );
 +                        if ( !text.isEmpty() )
 +                        {
-+                                const QFontMetricsF fm( font );
-+                                const double maxTextH = std::max( 0.0, targetH.pt() - 1.0 );
-+                                textBandH = std::min( fm.height() + 2.0, maxTextH );
++                                const double maxTextH = std::max( 0.0, targetH.pt() - textGap );
++                                textBandH = std::min( fm.height(), maxTextH );
 +                        }
 +                }
 +
-+                const double barcodeH = targetH.pt() - textBandH;
++                const double barcodeH =
++                        targetH.pt() - textBandH - ((textBandH > 0) ? textGap : 0.0);
 +
 +                if ( barcodeH > 0 )
 +                {
@@ -117,20 +120,33 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +
 +                if ( showText && !text.isEmpty() && (textBandH > 0) )
 +                {
-+                        const QRectF textRect( 0, barcodeH, targetW.pt(), textBandH );
++                        const double textTop = barcodeH + textGap;
++                        const QRectF textRect( 0, textTop, targetW.pt(), textBandH );
++                        const double baselineY = textTop + fm.ascent();
 +
 +                        painter->save();
 +                        painter->setClipRect( textRect );
 +                        painter->setFont( font );
 +                        painter->setPen( QPen( color ) );
-+                        painter->drawText( textRect,
-+                                           int(hAlign) | int(Qt::AlignVCenter) | int(Qt::TextSingleLine),
-+                                           text );
++
++                        const double textW = fm.horizontalAdvance( text );
++                        double textX = (targetW.pt() - textW) / 2.0;
++
++                        if ( hAlign & Qt::AlignLeft )
++                        {
++                                textX = 0.0;
++                        }
++                        else if ( hAlign & Qt::AlignRight )
++                        {
++                                textX = targetW.pt() - textW;
++                        }
++
++                        painter->drawText( QPointF( textX, baselineY ), text );
 +                        painter->restore();
 +                }
 +        }
  }
-@@ -447,3 +565,13 @@
+@@ -447,3 +576,13 @@
                          painter->setPen( QPen( color ) );
 -                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
 +                        renderBarcodeWithTextBand( painter,
@@ -145,8 +161,8 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                   mTextHAlign,
 +                                                   color );
                  }
-@@ -472,3 +600,13 @@
- 
+@@ -472,3 +611,13 @@
+
 -                renderBarcodeAtExactSize( painter, bc, mW, mH );
 +                renderBarcodeWithTextBand( painter,
 +                                           bc,
