@@ -1,10 +1,8 @@
 diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 --- a/model/ModelBarcodeObject.cpp
 +++ b/model/ModelBarcodeObject.cpp
-@@ -48,2 +48,61 @@
-         const double MIN_POINT_SIZE = 0.4; // Less than ~0.37 causes issues for QFontMetricsF
-+
-+
+@@ -46,2 +46,67 @@
+ 
 +        int barcodeTextPixelSize( double pointSize )
 +        {
 +                const double virtualDpi = 72.0;
@@ -68,13 +66,15 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                barcode->render( renderer );
 +                return renderer.text();
 +        }
- 
-@@ -67,3 +126,3 @@
++
++
+         void renderBarcodeAtExactSize( QPainter*           painter,
+@@ -63,3 +128,3 @@
  
 -                glbarcode::QtRenderer renderer(painter);
 +                NoTextQtRenderer renderer(painter);
                  barcode->render( renderer );
-@@ -72,2 +131,92 @@
+@@ -68,2 +133,91 @@
          }
 +
 +
@@ -91,14 +91,12 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                        Qt::Alignment       hAlign,
 +                                        const QColor&       color )
 +        {
-+                if ( (targetW.pt() <= 0) ||
-+                     (targetH.pt() <= 0) )
++                if ( (targetW.pt() <= 0) || (targetH.pt() <= 0) )
 +                {
 +                        return;
 +                }
 +
 +                QString text;
-+
 +                if ( showText )
 +                {
 +                        text = barcodeHumanReadableText( barcode );
@@ -115,54 +113,32 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                double textBandH = 0.0;
 +
 +                QFontMetricsF fontMetrics( font );
-+
 +                if ( showText && !text.isEmpty() )
 +                {
 +                        const double maxTextH =
-+                                std::max( 0.0,
-+                                          targetH.pt() - textGap );
-+
++                                std::max( 0.0, targetH.pt() - textGap );
 +                        textBandH =
-+                                std::min( fontMetrics.lineSpacing(),
-+                                          maxTextH );
++                                std::min( fontMetrics.lineSpacing(), maxTextH );
 +                }
 +
 +                const double barcodeH =
-+                        targetH.pt()
-+                        - textBandH
-+                        - ((textBandH > 0.0) ? textGap : 0.0);
++                        targetH.pt() - textBandH - ((textBandH > 0.0) ? textGap : 0.0);
 +
 +                if ( barcodeH > 0.0 )
 +                {
 +                        painter->save();
-+
-+                        painter->setClipRect(
-+                                QRectF( 0,
-+                                        0,
-+                                        targetW.pt(),
-+                                        barcodeH ) );
-+
-+                        renderBarcodeAtExactSize(
-+                                painter,
-+                                barcode,
-+                                targetW,
-+                                Distance::pt( barcodeH ) );
-+
++                        painter->setClipRect( QRectF( 0, 0, targetW.pt(), barcodeH ) );
++                        renderBarcodeAtExactSize( painter,
++                                                  barcode,
++                                                  targetW,
++                                                  Distance::pt( barcodeH ) );
 +                        painter->restore();
 +                }
 +
-+                if ( showText &&
-+                     !text.isEmpty() &&
-+                     (textBandH > 0.0) )
++                if ( showText && !text.isEmpty() && (textBandH > 0.0) )
 +                {
-+                        const double textTop =
-+                                barcodeH + textGap;
-+
-+                        const QRectF textRect(
-+                                0,
-+                                textTop,
-+                                targetW.pt(),
-+                                textBandH );
++                        const double textTop = barcodeH + textGap;
++                        const QRectF textRect( 0, textTop, targetW.pt(), textBandH );
 +
 +                        QTextOption textOption;
 +                        textOption.setAlignment( hAlign );
@@ -174,31 +150,23 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                        layout.setCacheEnabled( true );
 +
 +                        layout.beginLayout();
-+
 +                        QTextLine line = layout.createLine();
-+
 +                        if ( line.isValid() )
 +                        {
 +                                line.setLineWidth( targetW.pt() );
 +                                line.setPosition( QPointF( 0, 0 ) );
 +                        }
-+
 +                        layout.endLayout();
 +
 +                        painter->save();
-+
 +                        painter->setClipRect( textRect );
 +                        painter->setPen( QPen( color ) );
-+
-+                        layout.draw(
-+                                painter,
-+                                QPointF( 0, textTop ) );
-+
++                        layout.draw( painter, QPointF( 0, textTop ) );
 +                        painter->restore();
 +                }
 +        }
  }
-@@ -447,3 +597,13 @@
+@@ -411,3 +565,14 @@ namespace glabels::model
                          painter->setPen( QPen( color ) );
 -                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
 +                        renderBarcodeWithTextBand( painter,
@@ -214,7 +182,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                   mTextHAlign,
 +                                                   color );
                  }
-@@ -472,3 +632,13 @@
+@@ -435,3 +600,14 @@ namespace glabels::model
  
 -                renderBarcodeAtExactSize( painter, bc, mW, mH );
 +                renderBarcodeWithTextBand( painter,
