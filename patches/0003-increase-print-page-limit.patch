@@ -1,0 +1,22 @@
+Allow large variable-label runs from gLabels' own print view.
+
+The upstream UI limits the page-count spin box to 250.  That forces users to
+fall back to the Windows copy count, but copies made by the system print dialog
+repeat an already-rendered page and therefore do not advance gLabels variables.
+
+Keep the finite QSpinBox safeguard, but raise it to a practical 999999 pages.
+This only changes input validation; it does not pre-allocate pages or printer
+memory.  Large runs should still be submitted in manageable batches.
+
+diff --git a/glabels/ui/PrintView.ui b/glabels/ui/PrintView.ui
+--- a/glabels/ui/PrintView.ui
++++ b/glabels/ui/PrintView.ui
+@@ -135,7 +135,7 @@
+              <number>1</number>
+             </property>
+             <property name="maximum">
+-             <number>250</number>
++             <number>999999</number>
+             </property>
+            </widget>
+           </item>
