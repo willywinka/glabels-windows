@@ -102,6 +102,15 @@ constructor_code = r"""
                 barcodeTextAlignCombo->setCurrentIndex( 1 );
                 formLayout_6->addRow( tr("Alignment:"), barcodeTextAlignCombo );
 
+                auto* barcodeTextGapSpin = new QDoubleSpinBox( barcodePage );
+                barcodeTextGapSpin->setObjectName( "barcodeTextGapSpin" );
+                barcodeTextGapSpin->setDecimals( 2 );
+                barcodeTextGapSpin->setRange( 0.0, 50.0 );
+                barcodeTextGapSpin->setSingleStep( 0.25 );
+                barcodeTextGapSpin->setSuffix( " pt" );
+                barcodeTextGapSpin->setValue( 1.0 );
+                formLayout_6->addRow( tr("Text distance:"), barcodeTextGapSpin );
+
                 connect( barcodeFontFamilyCombo, SIGNAL(currentFontChanged(QFont)),
                          this, SLOT(onBarcodeControlsChanged()) );
                 connect( barcodeFontSizeSpin, SIGNAL(valueChanged(double)),
@@ -113,6 +122,8 @@ constructor_code = r"""
                 connect( barcodeFontUnderlineCheck, SIGNAL(toggled(bool)),
                          this, SLOT(onBarcodeControlsChanged()) );
                 connect( barcodeTextAlignCombo, SIGNAL(currentIndexChanged(int)),
+                         this, SLOT(onBarcodeControlsChanged()) );
+                connect( barcodeTextGapSpin, SIGNAL(valueChanged(double)),
                          this, SLOT(onBarcodeControlsChanged()) );
 """
 text = insert_after_in_function(
@@ -137,6 +148,8 @@ load_code = r"""
                                 barcodePage->findChild<QCheckBox*>("barcodeFontUnderlineCheck");
                         auto* barcodeTextAlignCombo =
                                 barcodePage->findChild<QComboBox*>("barcodeTextAlignCombo");
+                        auto* barcodeTextGapSpin =
+                                barcodePage->findChild<QDoubleSpinBox*>("barcodeTextGapSpin");
 
                         barcodeFontFamilyCombo->setCurrentFont( QFont( mObject->fontFamily() ) );
                         barcodeFontSizeSpin->setValue( mObject->fontSize() );
@@ -148,6 +161,13 @@ load_code = r"""
                                 barcodeTextAlignCombo->findData( int(mObject->textHAlign()) );
                         barcodeTextAlignCombo->setCurrentIndex(
                                 barcodeAlignIndex >= 0 ? barcodeAlignIndex : 1 );
+
+                        auto* barcodeObject =
+                                dynamic_cast<model::ModelBarcodeObject*>( mObject );
+                        if ( barcodeObject )
+                        {
+                                barcodeTextGapSpin->setValue( barcodeObject->bcTextGap() );
+                        }
 """
 text = insert_after_in_function(
     text,
@@ -171,6 +191,8 @@ change_code = r"""
                                 barcodePage->findChild<QCheckBox*>("barcodeFontUnderlineCheck");
                         auto* barcodeTextAlignCombo =
                                 barcodePage->findChild<QComboBox*>("barcodeTextAlignCombo");
+                        auto* barcodeTextGapSpin =
+                                barcodePage->findChild<QDoubleSpinBox*>("barcodeTextGapSpin");
 
                         mObject->setFontFamily( barcodeFontFamilyCombo->currentFont().family() );
                         mObject->setFontSize( barcodeFontSizeSpin->value() );
@@ -180,6 +202,13 @@ change_code = r"""
                         mObject->setFontUnderlineFlag( barcodeFontUnderlineCheck->isChecked() );
                         mObject->setTextHAlign(
                                 Qt::Alignment( barcodeTextAlignCombo->currentData().toInt() ) );
+
+                        auto* barcodeObject =
+                                dynamic_cast<model::ModelBarcodeObject*>( mObject );
+                        if ( barcodeObject )
+                        {
+                                barcodeObject->setBcTextGap( barcodeTextGapSpin->value() );
+                        }
 """
 text = insert_after_in_function(
     text,
@@ -196,6 +225,8 @@ p, text = read("model/ModelBarcodeObject.cpp")
 
 if "#include <QFontMetricsF>" not in text:
     text = insert_after(text, "#include <QDebug>", "\n#include <QFontMetricsF>", "QFontMetricsF include")
+if "#include <QTextLayout>" not in text:
+    text = insert_after(text, "#include <QFontMetricsF>", "\n#include <QTextLayout>", "QTextLayout include")
 if "#include <algorithm>" not in text:
     text = insert_after(text, '#include "glbarcode/QtRenderer.hpp"', "\n#include <algorithm>", "algorithm include")
 
@@ -206,6 +237,7 @@ copy_code = r"""
                 mTextFontItalicFlag    = object->mTextFontItalicFlag;
                 mTextFontUnderlineFlag = object->mTextFontUnderlineFlag;
                 mTextHAlign            = object->mTextHAlign;
+                mTextGap               = object->mTextGap;
 """
 text = insert_after_in_function(
     text,
@@ -225,6 +257,7 @@ creator_code = r"""
                 XmlUtil::setBoolAttr( node, "font_italic", object->fontItalicFlag() );
                 XmlUtil::setBoolAttr( node, "font_underline", object->fontUnderlineFlag() );
                 XmlUtil::setAlignmentAttr( node, "align", object->textHAlign() );
+                XmlUtil::setDoubleAttr( node, "text_gap", object->bcTextGap() );
 """
 text = insert_after_in_function(
     text,
@@ -248,6 +281,8 @@ parser_attrs = r"""
                         XmlUtil::getBoolAttr( node, "font_underline", false );
                 Qt::Alignment textHAlign =
                         XmlUtil::getAlignmentAttr( node, "align", Qt::AlignHCenter );
+                double        textGap =
+                        XmlUtil::getDoubleAttr( node, "text_gap", 1.0 );
 """
 text = insert_after_in_function(
     text,
@@ -298,6 +333,7 @@ if "object->setFontFamily( fontFamily );" not in sub:
         f"{indent}object->setFontItalicFlag( fontItalicFlag );\n",
         f"{indent}object->setFontUnderlineFlag( fontUnderlineFlag );\n",
         f"{indent}object->setTextHAlign( textHAlign );\n",
+        f"{indent}object->setBcTextGap( textGap );\n",
         f"{indent}return object;\n",
     ]
 
