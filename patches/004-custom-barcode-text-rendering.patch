@@ -1,7 +1,7 @@
 diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 --- a/model/ModelBarcodeObject.cpp
 +++ b/model/ModelBarcodeObject.cpp
-@@ -46,2 +46,67 @@
+@@ -46,2 +46,157 @@
  
 +        int barcodeTextPixelSize( double pointSize )
 +        {
@@ -60,6 +60,78 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +        };
 +
 +
++        class GraphicsYBoundsRenderer final : public glbarcode::Renderer
++        {
++        public:
++                bool hasGraphics() const
++                {
++                        return mHasGraphics;
++                }
++
++                double minY() const
++                {
++                        return mMinY;
++                }
++
++                double maxY() const
++                {
++                        return mMaxY;
++                }
++
++        private:
++                void extend( double top, double bottom )
++                {
++                        if ( !mHasGraphics )
++                        {
++                                mMinY = top;
++                                mMaxY = bottom;
++                                mHasGraphics = true;
++                        }
++                        else
++                        {
++                                mMinY = std::min( mMinY, top );
++                                mMaxY = std::max( mMaxY, bottom );
++                        }
++                }
++
++                void drawBegin( double, double ) override {}
++                void drawEnd() override {}
++
++                void drawLine( double, double y, double, double h ) override
++                {
++                        extend( y, y + h );
++                }
++
++                void drawBox( double, double y, double, double h ) override
++                {
++                        extend( y, y + h );
++                }
++
++                void drawText( double,
++                               double,
++                               double,
++                               const std::string&,
++                               glbarcode::HAlign ) override
++                {
++                }
++
++                void drawRing( double, double y, double r, double w ) override
++                {
++                        const double outerR = r + w/2.0;
++                        extend( y - outerR, y + outerR );
++                }
++
++                void drawHexagon( double, double y, double h ) override
++                {
++                        extend( y, y + h );
++                }
++
++                bool   mHasGraphics{ false };
++                double mMinY{ 0.0 };
++                double mMaxY{ 0.0 };
++        };
++
++
 +        QString barcodeHumanReadableText( glbarcode::Barcode* barcode )
 +        {
 +                TextCaptureRenderer renderer;
@@ -68,13 +140,57 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +        }
 +
 +
++        bool barcodeGraphicsYBounds( glbarcode::Barcode* barcode,
++                                     double&             minY,
++                                     double&             maxY )
++        {
++                GraphicsYBoundsRenderer renderer;
++                barcode->render( renderer );
++
++                if ( !renderer.hasGraphics() || (renderer.maxY() <= renderer.minY()) )
++                {
++                        return false;
++                }
++
++                minY = renderer.minY();
++                maxY = renderer.maxY();
++                return true;
++        }
++
++
          void renderBarcodeAtExactSize( QPainter*           painter,
-@@ -63,3 +128,3 @@
+@@ -53,18 +208,121 @@
+                 const double sourceW = barcode->width();
+                 const double sourceH = barcode->height();
+ 
+                 if ( (sourceW <= 0) || (sourceH <= 0) ||
+                      (targetW.pt() <= 0) || (targetH.pt() <= 0) )
+                 {
+                         return;
+                 }
+ 
++                double sourceTop = 0.0;
++                double sourceGraphicsH = sourceH;
++                double graphicsMinY = 0.0;
++                double graphicsMaxY = 0.0;
++
++                if ( !barcodeHumanReadableText( barcode ).isEmpty() &&
++                     barcodeGraphicsYBounds( barcode, graphicsMinY, graphicsMaxY ) )
++                {
++                        sourceTop = graphicsMinY;
++                        sourceGraphicsH = graphicsMaxY - graphicsMinY;
++                }
++
+                 painter->save();
+-                painter->scale( targetW.pt()/sourceW, targetH.pt()/sourceH );
++                painter->scale( targetW.pt()/sourceW, targetH.pt()/sourceGraphicsH );
++                painter->translate( 0.0, -sourceTop );
  
 -                glbarcode::QtRenderer renderer(painter);
 +                NoTextQtRenderer renderer(painter);
                  barcode->render( renderer );
-@@ -68,2 +133,91 @@
+ 
+                 painter->restore();
          }
 +
 +
@@ -89,6 +205,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                        bool                italic,
 +                                        bool                underline,
 +                                        Qt::Alignment       hAlign,
++                                        double              textGapValue,
 +                                        const QColor&       color )
 +        {
 +                if ( (targetW.pt() <= 0) || (targetH.pt() <= 0) )
@@ -109,7 +226,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                font.setItalic( italic );
 +                font.setUnderline( underline );
 +
-+                const double textGap = 1.0;
++                const double textGap = std::max( 0.0, textGapValue );
 +                double textBandH = 0.0;
 +
 +                QFontMetricsF fontMetrics( font );
@@ -166,7 +283,7 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                }
 +        }
  }
-@@ -411,3 +565,14 @@ namespace glabels::model
+@@ -411,3 +668,15 @@ namespace glabels::model
                          painter->setPen( QPen( color ) );
 -                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
 +                        renderBarcodeWithTextBand( painter,
@@ -180,9 +297,10 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                   mTextFontItalicFlag,
 +                                                   mTextFontUnderlineFlag,
 +                                                   mTextHAlign,
++                                                   mTextGap,
 +                                                   color );
                  }
-@@ -435,3 +600,14 @@ namespace glabels::model
+@@ -435,3 +704,15 @@ namespace glabels::model
  
 -                renderBarcodeAtExactSize( painter, bc, mW, mH );
 +                renderBarcodeWithTextBand( painter,
@@ -196,5 +314,6 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                           mTextFontItalicFlag,
 +                                           mTextFontUnderlineFlag,
 +                                           mTextHAlign,
++                                           mTextGap,
 +                                           color );
          }
