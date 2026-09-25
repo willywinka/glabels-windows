@@ -1,7 +1,7 @@
 diff --git a/model/ModelBarcodeObject.hpp b/model/ModelBarcodeObject.hpp
 --- a/model/ModelBarcodeObject.hpp
 +++ b/model/ModelBarcodeObject.hpp
-@@ -80,6 +80,94 @@ namespace glabels::model
+@@ -80,6 +80,111 @@ namespace glabels::model
                  bool bcTextFlag() const override;
                  void setBcTextFlag( bool value ) override;
  
@@ -92,11 +92,28 @@ diff --git a/model/ModelBarcodeObject.hpp b/model/ModelBarcodeObject.hpp
 +                        }
 +                }
 +
++                //
++                // Human-readable barcode text distance
++                //
++                double bcTextGap() const
++                {
++                        return mTextGap;
++                }
++
++                void setBcTextGap( double value )
++                {
++                        if ( mTextGap != value )
++                        {
++                                mTextGap = value;
++                                emit changed();
++                        }
++                }
++
 +
  
                  //
                  // Barcode Property: bcChecksumFlag
-@@ -155,4 +243,11 @@ namespace glabels::model
+@@ -155,4 +260,12 @@ namespace glabels::model
                  std::unique_ptr<glbarcode::Barcode> mEditorBarcode;
                  std::unique_ptr<glbarcode::Barcode> mEditorDefaultBarcode;
  
@@ -106,5 +123,6 @@ diff --git a/model/ModelBarcodeObject.hpp b/model/ModelBarcodeObject.hpp
 +                bool                mTextFontItalicFlag{ false };
 +                bool                mTextFontUnderlineFlag{ false };
 +                Qt::Alignment       mTextHAlign{ Qt::AlignHCenter };
++                double              mTextGap{ 1.0 };
 +
                  QPainterPath mHoverPath;
