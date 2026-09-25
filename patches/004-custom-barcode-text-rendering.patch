@@ -1,18 +1,16 @@
 diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 --- a/model/ModelBarcodeObject.cpp
 +++ b/model/ModelBarcodeObject.cpp
-@@ -30,3 +30,4 @@
- #include <QRegularExpression>
- #include <QTextBlock>
- #include <QTextDocument>
-+#include <QTextLayout>
-@@ -48,1 +49,59 @@
+@@ -48,2 +48,61 @@
          const double MIN_POINT_SIZE = 0.4; // Less than ~0.37 causes issues for QFontMetricsF
 +
 +
 +        int barcodeTextPixelSize( double pointSize )
 +        {
-+                return qMax( 1, qRound( std::max( pointSize, MIN_POINT_SIZE ) ) );
++                const double virtualDpi = 72.0;
++                return qMax( 1,
++                             qRound( std::max( pointSize, MIN_POINT_SIZE ) *
++                                     virtualDpi / 72.0 ) );
 +        }
 +
 +
@@ -25,7 +23,11 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                }
 +
 +        private:
-+                void drawText( double, double, double, const std::string&, glbarcode::HAlign ) override
++                void drawText( double,
++                               double,
++                               double,
++                               const std::string&,
++                               glbarcode::HAlign ) override
 +                {
 +                }
 +        };
@@ -66,10 +68,13 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                barcode->render( renderer );
 +                return renderer.text();
 +        }
-@@ -68,1 +127,1 @@
+ 
+@@ -67,3 +126,3 @@
+ 
 -                glbarcode::QtRenderer renderer(painter);
 +                NoTextQtRenderer renderer(painter);
-@@ -72,2 +131,87 @@
+                 barcode->render( renderer );
+@@ -72,2 +131,92 @@
          }
 +
 +
@@ -86,61 +91,92 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                        Qt::Alignment       hAlign,
 +                                        const QColor&       color )
 +        {
-+                if ( (targetW.pt() <= 0) || (targetH.pt() <= 0) )
++                if ( (targetW.pt() <= 0) ||
++                     (targetH.pt() <= 0) )
 +                {
 +                        return;
 +                }
 +
 +                QString text;
++
 +                if ( showText )
 +                {
 +                        text = barcodeHumanReadableText( barcode );
 +                }
 +
-+                QFont font( fontFamily );
++                QFont font;
++                font.setFamily( fontFamily );
 +                font.setPixelSize( barcodeTextPixelSize( fontSize ) );
 +                font.setWeight( fontWeight );
 +                font.setItalic( italic );
 +                font.setUnderline( underline );
 +
-+                const double textGap = 0.25;
++                const double textGap = 1.0;
 +                double textBandH = 0.0;
-+                const QFontMetricsF fm( font );
++
++                QFontMetricsF fontMetrics( font );
 +
 +                if ( showText && !text.isEmpty() )
 +                {
-+                        const double maxTextH = std::max( 0.0, targetH.pt() - textGap );
-+                        textBandH = std::min( fm.lineSpacing(), maxTextH );
++                        const double maxTextH =
++                                std::max( 0.0,
++                                          targetH.pt() - textGap );
++
++                        textBandH =
++                                std::min( fontMetrics.lineSpacing(),
++                                          maxTextH );
 +                }
 +
 +                const double barcodeH =
-+                        targetH.pt() - textBandH - ((textBandH > 0) ? textGap : 0.0);
++                        targetH.pt()
++                        - textBandH
++                        - ((textBandH > 0.0) ? textGap : 0.0);
 +
-+                if ( barcodeH > 0 )
++                if ( barcodeH > 0.0 )
 +                {
 +                        painter->save();
-+                        painter->setClipRect( QRectF( 0, 0, targetW.pt(), barcodeH ) );
-+                        renderBarcodeAtExactSize( painter,
-+                                                  barcode,
-+                                                  targetW,
-+                                                  Distance::pt(barcodeH) );
++
++                        painter->setClipRect(
++                                QRectF( 0,
++                                        0,
++                                        targetW.pt(),
++                                        barcodeH ) );
++
++                        renderBarcodeAtExactSize(
++                                painter,
++                                barcode,
++                                targetW,
++                                Distance::pt( barcodeH ) );
++
 +                        painter->restore();
 +                }
 +
-+                if ( showText && !text.isEmpty() && (textBandH > 0) )
++                if ( showText &&
++                     !text.isEmpty() &&
++                     (textBandH > 0.0) )
 +                {
-+                        const double textTop = barcodeH + textGap;
-+                        const QRectF textRect( 0, textTop, targetW.pt(), textBandH );
++                        const double textTop =
++                                barcodeH + textGap;
++
++                        const QRectF textRect(
++                                0,
++                                textTop,
++                                targetW.pt(),
++                                textBandH );
 +
 +                        QTextOption textOption;
 +                        textOption.setAlignment( hAlign );
 +                        textOption.setWrapMode( QTextOption::NoWrap );
 +
-+                        QTextLayout layout( text, font );
++                        QTextLayout layout( text );
++                        layout.setFont( font );
 +                        layout.setTextOption( textOption );
++                        layout.setCacheEnabled( true );
++
 +                        layout.beginLayout();
 +
 +                        QTextLine line = layout.createLine();
++
 +                        if ( line.isValid() )
 +                        {
 +                                line.setLineWidth( targetW.pt() );
@@ -150,18 +186,25 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                        layout.endLayout();
 +
 +                        painter->save();
++
 +                        painter->setClipRect( textRect );
 +                        painter->setPen( QPen( color ) );
-+                        layout.draw( painter, QPointF( 0, textTop ) );
++
++                        layout.draw(
++                                painter,
++                                QPointF( 0, textTop ) );
++
 +                        painter->restore();
 +                }
 +        }
  }
-@@ -448,1 +592,11 @@
+@@ -447,3 +597,13 @@
+                         painter->setPen( QPen( color ) );
 -                        renderBarcodeAtExactSize( painter, mEditorBarcode.get(), mW, mH );
 +                        renderBarcodeWithTextBand( painter,
 +                                                   mEditorBarcode.get(),
-+                                                   mW, mH,
++                                                   mW,
++                                                   mH,
 +                                                   mBcTextFlag,
 +                                                   mTextFontFamily,
 +                                                   mTextFontSize,
@@ -170,11 +213,14 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                                   mTextFontUnderlineFlag,
 +                                                   mTextHAlign,
 +                                                   color );
-@@ -473,1 +627,11 @@
+                 }
+@@ -472,3 +632,13 @@
+ 
 -                renderBarcodeAtExactSize( painter, bc, mW, mH );
 +                renderBarcodeWithTextBand( painter,
 +                                           bc,
-+                                           mW, mH,
++                                           mW,
++                                           mH,
 +                                           mBcTextFlag,
 +                                           mTextFontFamily,
 +                                           mTextFontSize,
@@ -183,3 +229,4 @@ diff --git a/model/ModelBarcodeObject.cpp b/model/ModelBarcodeObject.cpp
 +                                           mTextFontUnderlineFlag,
 +                                           mTextHAlign,
 +                                           color );
+         }
