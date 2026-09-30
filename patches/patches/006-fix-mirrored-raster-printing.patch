@@ -1,0 +1,65 @@
+diff --git a/model/ModelImageObject.cpp b/model/ModelImageObject.cpp
+--- a/model/ModelImageObject.cpp
++++ b/model/ModelImageObject.cpp
+@@ -38,4 +38,30 @@ namespace
+         const QColor fillColor  = QColor( 224, 224, 224, 255 );
+         const QColor labelColor = QColor( 102, 102, 102, 255 );
+         const Distance pad = Distance::pt(2);
++
++
++        void drawRasterImageWithoutReflectiveTransform( QPainter*      painter,
++                                                        const QRectF& destRect,
++                                                        const QImage& image,
++                                                        bool          normalizeReflection )
++        {
++                if ( !normalizeReflection )
++                {
++                        painter->drawImage( destRect, image );
++                        return;
++                }
++
++                /*
++                 * Keep raster reflections out of the painter transform.
++                 * Pre-mirror the pixels and cancel the object's reflection
++                 * locally. The visual result stays the same, while drawImage()
++                 * no longer depends on a reflective object transform.
++                 */
++                const QImage mirroredImage = image.mirrored( true, false );
++                painter->save();
++                painter->translate( destRect.left() + destRect.right(), 0.0 );
++                painter->scale( -1.0, 1.0 );
++                painter->drawImage( destRect, mirroredImage );
++                painter->restore();
++        }
+ }
+@@ -337,2 +363,3 @@ namespace glabels::model
+                 QRectF destRect( 0, 0, mW.pt(), mH.pt() );
++                const bool normalizeReflection = (matrix().determinant() < 0.0);
+                 QColor shadowColor = mShadowColorNode.color( record, variables );
+@@ -342,3 +369,3 @@ namespace glabels::model
+                         auto shadowImage = createShadowImage( mImage, shadowColor );
+-                        painter->drawImage( destRect, shadowImage );
++                        drawRasterImageWithoutReflectiveTransform( painter, destRect, shadowImage, normalizeReflection );
+                 }
+@@ -359,3 +386,3 @@ namespace glabels::model
+                                         QImage shadowImage = createShadowImage( image, shadowColor );
+-                                        painter->drawImage( destRect, shadowImage );
++                                        drawRasterImageWithoutReflectiveTransform( painter, destRect, shadowImage, normalizeReflection );
+                                 }
+@@ -381,2 +408,3 @@ namespace glabels::model
+                 QRectF destRect( 0, 0, mW.pt(), mH.pt() );
++                const bool normalizeReflection = (matrix().determinant() < 0.0);
+                 if ( inEditor && (mFilenameNode.isField() || (mImage.isNull() && mSvg.isEmpty()) ) )
+@@ -433,5 +461,5 @@ namespace glabels::model
+                 else if ( !mImage.isNull() )
+                 {
+-                        painter->drawImage( destRect, mImage );
++                        drawRasterImageWithoutReflectiveTransform( painter, destRect, mImage, normalizeReflection );
+                 }
+                 else if ( !mSvg.isEmpty() )
+@@ -448,3 +476,3 @@ namespace glabels::model
+                                 if ( !image.isNull() )
+                                 {
+-                                        painter->drawImage( destRect, image );
++                                        drawRasterImageWithoutReflectiveTransform( painter, destRect, image, normalizeReflection );
+                                 }
