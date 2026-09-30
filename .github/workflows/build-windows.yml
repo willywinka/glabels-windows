@@ -106,6 +106,9 @@ jobs:
             python patches/005-barcode-text-gui.py src
           fi
 
+          echo "==> patches/006-fix-windows-raster-printing.py"
+          python patches/006-fix-windows-raster-printing.py src
+
       - name: Clone vcpkg
         shell: bash
         run: git clone --depth 1 https://github.com/microsoft/vcpkg.git
@@ -134,7 +137,7 @@ jobs:
           set -euo pipefail
           # Since zint 2.10 the version macros are gone from the public header,
           # and FindLibZint.cmake then shells out to a `zint` executable that a
-          # library-only vcpkg install does not provide.  Feed the version in
+          # library-only vcpkg install does not provide. Feed the version in
           # from vcpkg's own metadata instead.
           line=$(./vcpkg/vcpkg list zint | head -n 1)
           ver=$(echo "$line" | awk '{print $2}' | sed 's/#.*//')
@@ -321,7 +324,7 @@ jobs:
           }
 
           # Leave the runner clean, and prove the uninstaller works while we are
-          # here.  "_?=" makes NSIS run the uninstaller synchronously.
+          # here. "_?=" makes NSIS run the uninstaller synchronously.
           Start-Process -FilePath $uninstaller -ArgumentList '/S', "_?=$instDir" -Wait
           for ($i = 0; $i -lt 10 -and (Test-Path $key); $i++) { Start-Sleep -Seconds 1 }
           if (Test-Path $key) { throw "uninstall left the registry entry behind" }
@@ -342,12 +345,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # A published release is immutable.  Re-running a build for a version
+          # A published release is immutable. Re-running a build for a version
           # that already exists (e.g. the weekly cron when upstream has not moved)
           # produces a byte-different but equivalent binary — MSVC and NSIS embed
-          # timestamps.  Overwriting the assets would change their SHA-256 and
+          # timestamps. Overwriting the assets would change their SHA-256 and
           # break every reference that pinned the old hash: the winget and
-          # Chocolatey manifests, and any SHA256SUMS a user already saved.  So we
+          # Chocolatey manifests, and any SHA256SUMS a user already saved. So we
           # publish only when the tag does not yet exist.
           want=false
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.publish_release }}" = "true" ]; then
