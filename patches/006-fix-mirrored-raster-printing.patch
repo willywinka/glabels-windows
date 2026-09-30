@@ -1,66 +1,56 @@
-diff --git a/model/ModelImageObject.cpp b/model/ModelImageObject.cpp
 --- a/model/ModelImageObject.cpp
 +++ b/model/ModelImageObject.cpp
-@@ -38,6 +38,36 @@ namespace
-         const QColor fillColor  = QColor( 224, 224, 224, 255 );
-         const QColor labelColor = QColor( 102, 102, 102, 255 );
+@@ -40,2 +40,33 @@
          const Distance pad = Distance::pt(2);
 +
-+        void drawRasterImageWithoutReflection( QPainter*      painter,
-+                                               const QRectF& destRect,
-+                                               const QImage& image,
-+                                               bool          reflected )
++
++        void drawRasterImageWithoutReflectiveTransform( QPainter*      painter,
++                                                        const QRectF& destRect,
++                                                        const QImage& image,
++                                                        bool          normalizeReflection )
 +        {
-+                if ( !reflected )
++                if ( !normalizeReflection )
 +                {
 +                        painter->drawImage( destRect, image );
 +                        return;
 +                }
 +
 +                /*
-+                 * ModelObject has already applied the object's reflective
-+                 * matrix to painter. Factor one horizontal reflection out
-+                 * of that matrix so drawImage() sees a positive-determinant
-+                 * transform, and bake the same reflection into the pixels.
++                 * Some native Windows printer drivers do not reliably honor
++                 * reflective painter transforms for raster images.
++                 *
++                 * Keep the final appearance identical while making the
++                 * transform seen by drawImage() non-reflective: mirror the
++                 * pixels, then add one local horizontal reflection. The two
++                 * reflections cancel visually, but the combined painter
++                 * transform has a positive determinant.
 +                 */
 +                const QImage mirroredImage = image.mirrored( true, false );
-+                const QRectF mirroredRect( -destRect.right(),
-+                                            destRect.top(),
-+                                            destRect.width(),
-+                                            destRect.height() );
 +
 +                painter->save();
++                painter->translate( destRect.left() + destRect.right(), 0.0 );
 +                painter->scale( -1.0, 1.0 );
-+                painter->drawImage( mirroredRect, mirroredImage );
++                painter->drawImage( destRect, mirroredImage );
 +                painter->restore();
 +        }
-+
  }
- 
- 
-@@ -379,6 +409,7 @@ namespace glabels::model
-                                            const Variables&     variables ) const
-         {
+@@ -381,2 +412,3 @@
                  QRectF destRect( 0, 0, mW.pt(), mH.pt() );
-+                const bool reflected = (matrix().determinant() < 0.0);
++                const bool normalizeReflection = (matrix().determinant() < 0.0);
                  if ( inEditor && (mFilenameNode.isField() || (mImage.isNull() && mSvg.isEmpty()) ) )
-                 {
-                         //
-@@ -432,7 +463,7 @@ namespace glabels::model
-                 }
-                 else if ( !mImage.isNull() )
+@@ -434,3 +466,6 @@
                  {
 -                        painter->drawImage( destRect, mImage );
-+                        drawRasterImageWithoutReflection( painter, destRect, mImage, reflected );
++                        drawRasterImageWithoutReflectiveTransform( painter,
++                                                                    destRect,
++                                                                    mImage,
++                                                                    normalizeReflection );
                  }
-                 else if ( !mSvg.isEmpty() )
-                 {
-@@ -447,7 +478,7 @@ namespace glabels::model
-                         {
-                                 if ( !image.isNull() )
+@@ -449,3 +484,6 @@
                                  {
 -                                        painter->drawImage( destRect, image );
-+                                        drawRasterImageWithoutReflection( painter, destRect, image, reflected );
++                                        drawRasterImageWithoutReflectiveTransform( painter,
++                                                                                    destRect,
++                                                                                    image,
++                                                                                    normalizeReflection );
                                  }
-                                 else if ( !svg.isEmpty() )
-                                 {
